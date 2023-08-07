@@ -2,6 +2,8 @@ package demo
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"log"
+	"net/http"
 	"os"
 	"snowlastic-cli/pkg/es"
 	"strings"
@@ -231,10 +234,22 @@ func IndexDemos(demosPath, demoSettings, credsPath, caCertPath string) error {
 }
 
 func generateEsClient(credsPath, caCertPath string) (*elasticsearch.Client, error) {
+	// according to https://github.com/elastic/go-elasticsearch/issues/86#issuecomment-527962518
+	// required when there are enterprise certificates which need to be used in this context
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	// read the cert used/created by elasticsearch
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
 		return &elasticsearch.Client{}, err
 	}
+	// Append our cert to the system pool
+	if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+		log.Println("No certs appended, using system certs only")
+	}
+
 	var creds = make(map[string]string)
 	b, err := os.ReadFile(credsPath)
 	if err != nil {
@@ -244,11 +259,16 @@ func generateEsClient(credsPath, caCertPath string) (*elasticsearch.Client, erro
 	if err != nil {
 		return &elasticsearch.Client{}, err
 	}
-	c, err := elasticsearch.NewClient(elasticsearch.Config{
+
+	cfg := elasticsearch.Config{ // works locally, but not when there are enterprise certs
 		Addresses: []string{"Https://localhost:9200"},
 		Username:  creds["user"],
 		Password:  creds["pass"],
-		CACert:    caCert,
-	})
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+				RootCAs:            rootCAs}},
+	}
+	c, err := elasticsearch.NewClient(cfg)
 	return c, err
 }
