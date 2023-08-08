@@ -24,6 +24,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"snowlastic-cli/cmd/create"
+	_import "snowlastic-cli/cmd/import"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -60,8 +62,12 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	// subcommand additions
+	rootCmd.AddCommand(create.Add())
+	rootCmd.AddCommand(_import.Add())
+
 	// Flags and configuration settings
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (usually, ./snowlastic-cli.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (usually, ./snowlastic-cli.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.
