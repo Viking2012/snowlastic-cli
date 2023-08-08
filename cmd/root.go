@@ -24,6 +24,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,8 +34,9 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "snowlastic-cli",
-	Short: "A brief description of your application",
+	Use:     "snowlastic-cli",
+	Version: "1.0.0",
+	Short:   "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
 
@@ -43,7 +45,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	//Run: printConfig,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -58,15 +60,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.snowlastic-cli.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Flags and configuration settings
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (usually, ./snowlastic-cli.yaml)")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -75,14 +70,10 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
 		// Search config in home directory with name ".snowlastic-cli" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(".")
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".snowlastic-cli")
+		viper.SetConfigName("snowlastic-cli")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -91,4 +82,45 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func printConfig(_ *cobra.Command, _ []string) {
+	//  Simple print the provided configuration file
+	var (
+		maskedSnowflakePassword strings.Builder
+		maskedElasticPassword   strings.Builder
+	)
+	for range viper.GetString("snowflakePassword") {
+		maskedSnowflakePassword.WriteString("*")
+	}
+	for range viper.GetString("elasticPassword") {
+		maskedElasticPassword.WriteString("*")
+	}
+
+	fmt.Println("------------------------------------------------")
+	fmt.Println("-----  current golastic-cli configuration  -----")
+	fmt.Println("------------------------------------------------")
+	fmt.Println()
+	fmt.Printf("%-21s: %s\n", "snowflakeUser", viper.GetString("snowflakeUser"))
+	fmt.Printf("%-21s: %s\n", "snowflakePassword", maskedSnowflakePassword.String())
+	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
+	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
+	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
+	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
+	fmt.Printf("%-21s:", "snowflakeSchemas")
+	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
+		if i == 0 {
+			fmt.Println(" -", schema)
+		} else {
+			fmt.Printf("%24s %s\n", "-", schema)
+		}
+	}
+	fmt.Println()
+	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
+	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
+	fmt.Printf("%-21s: %s\n", "elasticUser", viper.GetString("elasticUser"))
+	fmt.Printf("%-21s: %s\n", "elasticPassword", maskedElasticPassword.String())
+	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
+	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
+	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
 }
