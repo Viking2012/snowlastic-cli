@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"snowlastic-cli/pkg/es"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -26,6 +27,7 @@ type Demo struct {
 }
 
 func (d *Demo) IsICMEntity() bool { return true }
+func (d *Demo) GetID() string     { return strconv.Itoa(d.ID) }
 
 func IndexDemos(demosPath, demoSettings, credsPath, caCertPath string) error {
 	var (
