@@ -41,10 +41,11 @@ to quickly create a Cobra application.`,
 	//Run: func(cmd *cobra.Command, args []string) {
 	//	fmt.Println("create called")
 	//},
-	//Run: printConfig,
+	Run: printConfig,
 }
 
 func init() {
+	createCmd.AddCommand(indexCmd)
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -120,26 +121,26 @@ func printConfig(_ *cobra.Command, _ []string) {
 	fmt.Println("-----  current golastic-cli configuration  -----")
 	fmt.Println("------------------------------------------------")
 	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "snowflakeUser", viper.GetString("snowflakeUser"))
-	fmt.Printf("%-21s: %s\n", "snowflakePassword", maskedSnowflakePassword.String())
-	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
-	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
-	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
-	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeUser", viper.GetString("snowflakeUser"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakePassword", maskedSnowflakePassword.String())
+	fmt.Printf("%-21s: '%s'\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeRole", viper.GetString("snowflakeRole"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
 	fmt.Printf("%-21s:", "snowflakeSchemas")
 	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
 		if i == 0 {
 			fmt.Println(" -", schema)
 		} else {
-			fmt.Printf("%24s %s\n", "-", schema)
+			fmt.Printf("%24s '%s'\n", "-", schema)
 		}
 	}
 	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
-	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
-	fmt.Printf("%-21s: %s\n", "elasticUser", viper.GetString("elasticUser"))
-	fmt.Printf("%-21s: %s\n", "elasticPassword", maskedElasticPassword.String())
-	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
-	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
-	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
+	fmt.Printf("%-21s: '%s'\n", "elasticUrl", viper.GetString("elasticUrl"))
+	fmt.Printf("%-21s: '%d'\n", "elasticPort", viper.GetInt("elasticPort"))
+	fmt.Printf("%-21s: '%s'\n", "elasticUser", viper.GetString("elasticUser"))
+	fmt.Printf("%-21s: '%s'\n", "elasticPassword", maskedElasticPassword.String())
+	fmt.Printf("%-21s: '%s'\n", "elasticApiKey", viper.GetString("elasticApiKey"))
+	fmt.Printf("%-21s: '%s'\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
+	fmt.Printf("%-21s: '%s'\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
 }
