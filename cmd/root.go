@@ -23,6 +23,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"snowlastic-cli/cmd/create"
 	_import "snowlastic-cli/cmd/import"
@@ -32,7 +33,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	verbose bool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -45,9 +49,14 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	PreRun: func(cmd *cobra.Command, args []string) {
+		if verbose {
+			log.SetOutput(os.Stdout)
+		}
+	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	//Run: printConfig,
+	Run: printConfig,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -68,6 +77,7 @@ func init() {
 
 	// Flags and configuration settings
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (usually, ./snowlastic-cli.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "set verbose output")
 }
 
 // initConfig reads in config file and ENV variables if set.
