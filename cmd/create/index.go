@@ -53,6 +53,7 @@ to quickly create a Cobra application.`,
 		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
 			return errors.New("at least one flag is required by the index command")
 		}
+		printConfig(cmd, args)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -61,8 +62,10 @@ to quickly create a Cobra application.`,
 			caCert     []byte
 			caCertPath string = viper.GetString("elasticCaCertPath")
 		)
+		log.Println("looking for CA certificate in", caCertPath)
 		if caCertPath != "" {
 			caCert, err = os.ReadFile(caCertPath)
+			log.Println("read caCert from", caCertPath)
 			if err != nil {
 				return err
 			}
@@ -132,7 +135,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	createCmd.AddCommand(indexCmd)
+	//createCmd.AddCommand(indexCmd)
 
 	// Here you will define your flags and configuration settings.
 
