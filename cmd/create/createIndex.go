@@ -52,6 +52,7 @@ to quickly create a Cobra application.`,
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var err error
 		if runAll {
 			fmt.Println("creating vendor index")
 			if err != nil {
