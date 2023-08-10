@@ -22,6 +22,8 @@ THE SOFTWARE.
 package _import
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,9 +32,11 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/viper"
 	"log"
+	"net"
+	"net/http"
 	"os"
-	"snowlastic-cli/demo"
 	"snowlastic-cli/pkg/es"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -54,9 +58,9 @@ to quickly create a Cobra application.`,
 			caCert     []byte
 			caCertPath string = viper.GetString("elasticCaCertPath")
 
-			demos []demo.Demo
+			demos []Demo
 			b     []byte
-			docs  chan icm_orm.ICMEntity
+			docs  = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 			c     *elasticsearch.Client
 
 			indexName = "demo"
@@ -66,26 +70,42 @@ to quickly create a Cobra application.`,
 		)
 
 		if caCertPath != "" {
+			log.Println("reading CA Cert from", caCertPath)
 			caCert, err = os.ReadFile(caCertPath)
 			if err != nil {
 				return err
 			}
 		}
 
-		log.Println("creating ES client")
-		var cfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPass"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
+		rootCAs, _ := x509.SystemCertPool()
+		if rootCAs == nil {
+			rootCAs = x509.NewCertPool()
 		}
-		c, err = es.NewElasticClient(&cfg)
+		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
+			log.Println("No certs appended, using system certs only")
+		}
+
+		var config elasticsearch.Config = elasticsearch.Config{
+			Addresses: []string{"https://localhost:9200"},
+			Username:  "elastic",
+			Password:  "g+rvu0u5rjAzVx7XaV_t",
+			Transport: &http.Transport{
+				MaxIdleConnsPerHost:   10,
+				ResponseHeaderTimeout: time.Second,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+					RootCAs:            rootCAs,
+				},
+			},
+		}
+		c, err = elasticsearch.NewClient(config)
+		if err != nil {
+			return err
+		}
 
 		// Get demos array
 		log.Println("reading demos json")
@@ -98,12 +118,17 @@ to quickly create a Cobra application.`,
 
 		start := time.Now().UTC()
 		go func() {
-			for _, e := range demos {
-				docs <- icm_orm.ICMEntity(&e)
+			// we cannot use _, demo := range demos here, since we need to pass
+			// a pointer to the element as an ICMEntity. When using _, demo := range demos
+			// the pointer will always point to the last document in the list.
+			// Instead we point directly to the entry in the slice of demos we've created above
+			for i := range demos {
+				docs <- icm_orm.ICMEntity(&demos[i])
 			}
+			close(docs)
 		}()
 
-		batches := es.BatchEntities(docs, 1000)
+		batches := es.BatchEntities(docs, es.BulkInsertSize)
 		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName)
 		if err != nil {
 			return err
@@ -142,6 +167,16 @@ func init() {
 	// is called directly, e.g.:
 	// demoCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
+
+type Demo struct {
+	ID          int    `json:"id"`
+	SearchTerm  string `json:"search-term"`
+	Value       string `json:"value"`
+	ShouldMatch bool   `json:"should-match"`
+}
+
+func (d *Demo) IsICMEntity() bool { return true }
+func (d *Demo) GetID() string     { return strconv.Itoa(d.ID) }
 
 const _demos string = `[
   {
