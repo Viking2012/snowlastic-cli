@@ -26,9 +26,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
-	"os"
-	"snowlastic-cli/pkg/es"
+	"strings"
 )
 
 var (
@@ -53,43 +51,10 @@ to quickly create a Cobra application.`,
 		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
 			return errors.New("at least one flag is required by the index command")
 		}
-		printConfig(cmd, args)
+		printConfigFromIndex(cmd, args)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var (
-			err        error
-			caCert     []byte
-			caCertPath string = viper.GetString("elasticCaCertPath")
-		)
-		log.Println("looking for CA certificate in", caCertPath)
-		if caCertPath != "" {
-			caCert, err = os.ReadFile(caCertPath)
-			log.Println("read caCert from", caCertPath)
-			if err != nil {
-				return err
-			}
-		}
-
-		log.Println("creating ES client")
-		var cfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPass"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
-		}
-
-		c, err := es.NewElasticClient(&cfg)
-		if err != nil {
-			return err
-		}
-
 		if runAll {
 			fmt.Println("creating vendor index")
 			if err != nil {
@@ -100,7 +65,7 @@ to quickly create a Cobra application.`,
 				return err
 			}
 			fmt.Println("creating demo index")
-			err = indexDemo(c)
+			err = indexDemo()
 			if err != nil {
 				return err
 			}
@@ -119,7 +84,7 @@ to quickly create a Cobra application.`,
 		}
 		if isDemo {
 			fmt.Println("creating demo index")
-			err = indexDemo(c)
+			err = indexDemo()
 			if err != nil {
 				return err
 			}
@@ -157,3 +122,44 @@ func init() {
 func indexCustomer() error { return nil }
 
 func indexFromFile(fp string) error { return nil }
+
+func printConfigFromIndex(_ *cobra.Command, _ []string) {
+	//  Simple print the provided configuration file
+	var (
+		maskedSnowflakePassword strings.Builder
+		maskedElasticPassword   strings.Builder
+	)
+	for range viper.GetString("snowflakePassword") {
+		maskedSnowflakePassword.WriteString("*")
+	}
+	for range viper.GetString("elasticPassword") {
+		maskedElasticPassword.WriteString("*")
+	}
+
+	fmt.Println("------------------------------------------------")
+	fmt.Println("-----  current golastic-cli configuration  -----")
+	fmt.Println("------------------------------------------------")
+	fmt.Println()
+	fmt.Printf("%-21s: '%s'\n", "snowflakeUser", viper.GetString("snowflakeUser"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakePassword", viper.GetString("snowflakePassword"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeRole", viper.GetString("snowflakeRole"))
+	fmt.Printf("%-21s: '%s'\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
+	fmt.Printf("%-21s:", "snowflakeSchemas")
+	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
+		if i == 0 {
+			fmt.Println(" -", schema)
+		} else {
+			fmt.Printf("%24s '%s'\n", "-", schema)
+		}
+	}
+	fmt.Println()
+	fmt.Printf("%-21s: '%s'\n", "elasticUrl", viper.GetString("elasticUrl"))
+	fmt.Printf("%-21s: '%d'\n", "elasticPort", viper.GetInt("elasticPort"))
+	fmt.Printf("%-21s: '%s'\n", "elasticUser", viper.GetString("elasticUser"))
+	fmt.Printf("%-21s: '%s'\n", "elasticPassword", viper.GetString("elasticPassword"))
+	fmt.Printf("%-21s: '%s'\n", "elasticApiKey", viper.GetString("elasticApiKey"))
+	fmt.Printf("%-21s: '%s'\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
+	fmt.Printf("%-21s: '%s'\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
+}

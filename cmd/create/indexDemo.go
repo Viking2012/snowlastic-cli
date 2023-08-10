@@ -2,30 +2,55 @@ package create
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/spf13/viper"
 	"log"
+	"os"
+	"snowlastic-cli/pkg/es"
 )
 
-func indexDemo(c *elasticsearch.Client) error {
-	log.Println("deleting the index, if it exists")
-	if res, err = c.Indices.Delete([]string{indexName}); err != nil {
-		return errors.New(fmt.Sprintf("Cannot delete index: %s", err))
-	}
-
-	log.Println("reading demo settings")
-	b := []byte(demoIndex)
-
-	log.Println("creating demo index")
-	res, err = c.Indices.Create(indexName, c.Indices.Create.WithBody(bytes.NewReader(b)))
+func indexDemo() error {
+	caCertPath := viper.GetString("elasticCaCertPath")
+	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Cannot create index: %s", err))
+		return err
+	}
+	cfg := es.ElasticClientConfig{
+		Addresses: []string{fmt.Sprintf(
+			"https://%s:%s",
+			viper.GetString("elasticUrl"),
+			viper.GetString("elasticPort"),
+		)},
+		User:         viper.GetString("elasticUser"),
+		Pass:         viper.GetString("elasticPassword"),
+		ApiKey:       viper.GetString("elasticApiKey"),
+		ServiceToken: viper.GetString("elasticServiceToken"),
+		CaCert:       caCert,
+	}
+	c, err := es.NewElasticClient(&cfg)
+	if err != nil {
+		return err
+	}
+	res, err := c.Indices.Delete([]string{"demo"})
+	if err != nil {
+		return fmt.Errorf("cannot delete index: %s", err)
 	}
 	if res.IsError() {
-		return errors.New(fmt.Sprintf("Cannot create index: %s", res))
+		log.Println("error when deleting index", res.String())
+	} else {
+		log.Println(res.String())
 	}
 
+	b := []byte(demoIndex)
+	res, err = c.Indices.Create("demo", c.Indices.Create.WithBody(bytes.NewReader(b)))
+	if err != nil {
+		return fmt.Errorf("cannot create index: %s", err)
+	}
+
+	if res.IsError() {
+		return fmt.Errorf("cannot create index, got an error response code: %s\n", res.String())
+	}
+	log.Println("successfully created an index")
 	return nil
 }
 
