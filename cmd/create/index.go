@@ -25,8 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"strings"
 )
 
 var (
@@ -51,7 +49,6 @@ to quickly create a Cobra application.`,
 		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
 			return errors.New("at least one flag is required by the index command")
 		}
-		printConfigFromIndex(cmd, args)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -122,44 +119,3 @@ func init() {
 func indexCustomer() error { return nil }
 
 func indexFromFile(fp string) error { return nil }
-
-func printConfigFromIndex(_ *cobra.Command, _ []string) {
-	//  Simple print the provided configuration file
-	var (
-		maskedSnowflakePassword strings.Builder
-		maskedElasticPassword   strings.Builder
-	)
-	for range viper.GetString("snowflakePassword") {
-		maskedSnowflakePassword.WriteString("*")
-	}
-	for range viper.GetString("elasticPassword") {
-		maskedElasticPassword.WriteString("*")
-	}
-
-	fmt.Println("------------------------------------------------")
-	fmt.Println("-----  current golastic-cli configuration  -----")
-	fmt.Println("------------------------------------------------")
-	fmt.Println()
-	fmt.Printf("%-21s: '%s'\n", "snowflakeUser", viper.GetString("snowflakeUser"))
-	fmt.Printf("%-21s: '%s'\n", "snowflakePassword", viper.GetString("snowflakePassword"))
-	fmt.Printf("%-21s: '%s'\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
-	fmt.Printf("%-21s: '%s'\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
-	fmt.Printf("%-21s: '%s'\n", "snowflakeRole", viper.GetString("snowflakeRole"))
-	fmt.Printf("%-21s: '%s'\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
-	fmt.Printf("%-21s:", "snowflakeSchemas")
-	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
-		if i == 0 {
-			fmt.Println(" -", schema)
-		} else {
-			fmt.Printf("%24s '%s'\n", "-", schema)
-		}
-	}
-	fmt.Println()
-	fmt.Printf("%-21s: '%s'\n", "elasticUrl", viper.GetString("elasticUrl"))
-	fmt.Printf("%-21s: '%d'\n", "elasticPort", viper.GetInt("elasticPort"))
-	fmt.Printf("%-21s: '%s'\n", "elasticUser", viper.GetString("elasticUser"))
-	fmt.Printf("%-21s: '%s'\n", "elasticPassword", viper.GetString("elasticPassword"))
-	fmt.Printf("%-21s: '%s'\n", "elasticApiKey", viper.GetString("elasticApiKey"))
-	fmt.Printf("%-21s: '%s'\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
-	fmt.Printf("%-21s: '%s'\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
-}
