@@ -14,7 +14,8 @@ import (
 const BulkInsertSize = 1000
 
 func BatchEntities(docs <-chan icm_orm.ICMEntity, batchSize int) chan []icm_orm.ICMEntity {
-	var batches = make(chan []icm_orm.ICMEntity)
+	var batches = make(chan []icm_orm.ICMEntity, 1)
+
 	go func() {
 		defer close(batches)
 		for keepBatching := true; keepBatching; {
