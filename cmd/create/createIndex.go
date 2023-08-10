@@ -116,7 +116,3 @@ func init() {
 	indexCmd.Flags().StringVarP(&fromFile, "from", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
 	//indexCmd.Flags().BoolP("demo", "", false, "create a demo index")
 }
-
-func indexCustomer() error { return nil }
-
-func indexFromFile(fp string) error { return nil }
