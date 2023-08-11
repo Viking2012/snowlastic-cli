@@ -23,7 +23,6 @@ package create
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // CreateCmd represents the create command
@@ -36,65 +35,10 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	//Run: func(cmd *cobra.Command, args []string) {
-	//	fmt.Println("create called")
-	//},
 }
 
 func init() {
 	createCmd.AddCommand(indexCmd)
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
-	// Snowflake flags
-	createCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username`)
-	_ = viper.BindPFlag("snowflakeUser", createCmd.PersistentFlags().Lookup("snowflakeUser"))
-
-	createCmd.PersistentFlags().String("snowflakePassword", "", `Snowflake Password`)
-	_ = viper.BindPFlag("snowflakePassword", createCmd.PersistentFlags().Lookup("snowflakePassword"))
-
-	createCmd.PersistentFlags().String("snowflakeAccount", "", `Snowflake Account name`)
-	_ = viper.BindPFlag("snowflakeAccount", createCmd.PersistentFlags().Lookup("snowflakeAccount"))
-
-	createCmd.PersistentFlags().String("snowflakeWarehouse", "", `Snowflake Warehouse name`)
-	_ = viper.BindPFlag("snowflakeWarehouse", createCmd.PersistentFlags().Lookup("snowflakeWarehouse"))
-
-	createCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role`)
-	_ = viper.BindPFlag("snowflakeRole", createCmd.PersistentFlags().Lookup("snowflakeRole"))
-
-	createCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database`)
-	_ = viper.BindPFlag("snowflakeDatabase", createCmd.PersistentFlags().Lookup("snowflakeDatabase"))
-
-	createCmd.PersistentFlags().StringSlice("snowflakeSchemas", []string{}, "A comma seperated list of relevant schemas")
-	_ = viper.BindPFlag("snowflakeSchemas", createCmd.PersistentFlags().Lookup("snowflakeSchemas"))
-
-	// Elastic flags
-	createCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch node")
-	_ = viper.BindPFlag("elasticUrl", createCmd.PersistentFlags().Lookup("elasticUrl"))
-
-	createCmd.PersistentFlags().Int("elasticPort", 9200, "Elasticsearch node port number")
-	_ = viper.BindPFlag("elasticPort", createCmd.PersistentFlags().Lookup("elasticPort"))
-
-	createCmd.PersistentFlags().String("elasticUser", "", "Elasticsearch username")
-	_ = viper.BindPFlag("elasticUser", createCmd.PersistentFlags().Lookup("elasticUser"))
-
-	createCmd.PersistentFlags().String("elasticPassword", "", "Elasticsearch user password")
-	_ = viper.BindPFlag("elasticPassword", createCmd.PersistentFlags().Lookup("elasticPassword"))
-
-	createCmd.PersistentFlags().String("elasticApiKey", "", "Elasticsearch API Key")
-	_ = viper.BindPFlag("elasticApiKey", createCmd.PersistentFlags().Lookup("elasticApiKey"))
-
-	createCmd.PersistentFlags().String("elasticServiceToken", "", "Elasticsearch Bearer Token")
-	_ = viper.BindPFlag("elasticServiceToken", createCmd.PersistentFlags().Lookup("elasticServiceToken"))
-
-	createCmd.PersistentFlags().String("elasticCaCertPath", "", "Elasticsearch CA Certificate Path")
-	_ = viper.BindPFlag("elasticCaCertPath", createCmd.PersistentFlags().Lookup("elasticCaCertPath"))
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// createCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func Add() *cobra.Command {
