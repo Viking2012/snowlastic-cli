@@ -49,6 +49,12 @@ to quickly create a Cobra application.`,
 		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
 			return errors.New("at least one flag is required by the index command")
 		}
+		if fromFile != "" && len(args) == 0 {
+			return errors.New(`you must provide an index name when creating an anonymous index from a file
+Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index name>
+
+`)
+		}
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
