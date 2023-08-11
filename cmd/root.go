@@ -23,14 +23,12 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"log"
 	"os"
 	"snowlastic-cli/cmd/create"
 	_import "snowlastic-cli/cmd/import"
-	"strings"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -56,7 +54,7 @@ to quickly create a Cobra application.`,
 	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: printConfig,
+	//Run: printConfig,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -76,7 +74,7 @@ func init() {
 	rootCmd.AddCommand(_import.Add())
 
 	// Flags and configuration settings
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (usually, ./snowlastic-cli.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (usually ./snowlastic-cli.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "set verbose output")
 }
 
@@ -100,43 +98,43 @@ func initConfig() {
 	}
 }
 
-func printConfig(_ *cobra.Command, _ []string) {
-	//  Simple print the provided configuration file
-	var (
-		maskedSnowflakePassword strings.Builder
-		maskedElasticPassword   strings.Builder
-	)
-	for range viper.GetString("snowflakePassword") {
-		maskedSnowflakePassword.WriteString("*")
-	}
-	for range viper.GetString("elasticPassword") {
-		maskedElasticPassword.WriteString("*")
-	}
-
-	fmt.Println("------------------------------------------------")
-	fmt.Println("-----  current golastic-cli configuration  -----")
-	fmt.Println("------------------------------------------------")
-	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "snowflakeUser", viper.GetString("snowflakeUser"))
-	fmt.Printf("%-21s: %s\n", "snowflakePassword", maskedSnowflakePassword.String())
-	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
-	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
-	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
-	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
-	fmt.Printf("%-21s:", "snowflakeSchemas")
-	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
-		if i == 0 {
-			fmt.Println(" -", schema)
-		} else {
-			fmt.Printf("%24s %s\n", "-", schema)
-		}
-	}
-	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
-	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
-	fmt.Printf("%-21s: %s\n", "elasticUser", viper.GetString("elasticUser"))
-	fmt.Printf("%-21s: %s\n", "elasticPassword", maskedElasticPassword.String())
-	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
-	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
-	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
-}
+//func printConfig(_ *cobra.Command, _ []string) {
+//	//  Simple print the provided configuration file
+//	var (
+//		maskedSnowflakePassword strings.Builder
+//		maskedElasticPassword   strings.Builder
+//	)
+//	for range viper.GetString("snowflakePassword") {
+//		maskedSnowflakePassword.WriteString("*")
+//	}
+//	for range viper.GetString("elasticPassword") {
+//		maskedElasticPassword.WriteString("*")
+//	}
+//
+//	fmt.Println("------------------------------------------------")
+//	fmt.Println("-----  current golastic-cli configuration  -----")
+//	fmt.Println("------------------------------------------------")
+//	fmt.Println()
+//	fmt.Printf("%-21s: %s\n", "snowflakeUser", viper.GetString("snowflakeUser"))
+//	fmt.Printf("%-21s: %s\n", "snowflakePassword", maskedSnowflakePassword.String())
+//	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
+//	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
+//	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
+//	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
+//	fmt.Printf("%-21s:", "snowflakeSchemas")
+//	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
+//		if i == 0 {
+//			fmt.Println(" -", schema)
+//		} else {
+//			fmt.Printf("%24s %s\n", "-", schema)
+//		}
+//	}
+//	fmt.Println()
+//	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
+//	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
+//	fmt.Printf("%-21s: %s\n", "elasticUser", viper.GetString("elasticUser"))
+//	fmt.Printf("%-21s: %s\n", "elasticPassword", maskedElasticPassword.String())
+//	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
+//	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
+//	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
+//}
