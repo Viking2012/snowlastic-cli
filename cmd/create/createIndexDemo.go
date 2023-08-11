@@ -3,34 +3,34 @@ package create
 import (
 	"bytes"
 	"fmt"
-	"github.com/spf13/viper"
+	"github.com/elastic/go-elasticsearch/v8"
 	"log"
-	"os"
-	"snowlastic-cli/pkg/es"
 )
 
-func indexDemo() error {
-	caCertPath := viper.GetString("elasticCaCertPath")
-	caCert, err := os.ReadFile(caCertPath)
-	if err != nil {
-		return err
-	}
-	cfg := es.ElasticClientConfig{
-		Addresses: []string{fmt.Sprintf(
-			"https://%s:%s",
-			viper.GetString("elasticUrl"),
-			viper.GetString("elasticPort"),
-		)},
-		User:         viper.GetString("elasticUser"),
-		Pass:         viper.GetString("elasticPassword"),
-		ApiKey:       viper.GetString("elasticApiKey"),
-		ServiceToken: viper.GetString("elasticServiceToken"),
-		CaCert:       caCert,
-	}
-	c, err := es.NewElasticClient(&cfg)
-	if err != nil {
-		return err
-	}
+var ()
+
+func indexDemo(c *elasticsearch.Client) error {
+	//caCertPath := viper.GetString("elasticCaCertPath")
+	//caCert, err := os.ReadFile(caCertPath)
+	//if err != nil {
+	//	return err
+	//}
+	//cfg := es.ElasticClientConfig{
+	//	Addresses: []string{fmt.Sprintf(
+	//		"https://%s:%s",
+	//		viper.GetString("elasticUrl"),
+	//		viper.GetString("elasticPort"),
+	//	)},
+	//	User:         viper.GetString("elasticUser"),
+	//	Pass:         viper.GetString("elasticPassword"),
+	//	ApiKey:       viper.GetString("elasticApiKey"),
+	//	ServiceToken: viper.GetString("elasticServiceToken"),
+	//	CaCert:       caCert,
+	//}
+	//c, err := es.NewElasticClient(&cfg)
+	//if err != nil {
+	//	return err
+	//}
 	res, err := c.Indices.Delete([]string{"demo"})
 	if err != nil {
 		return fmt.Errorf("cannot delete index: %s", err)

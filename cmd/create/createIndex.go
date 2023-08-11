@@ -24,7 +24,11 @@ package create
 import (
 	"errors"
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"os"
+	"snowlastic-cli/pkg/es"
 )
 
 var (
@@ -33,6 +37,8 @@ var (
 	isDemo     bool
 	runAll     bool
 	fromFile   string
+
+	c *elasticsearch.Client
 )
 
 // indexCmd represents the index command
@@ -58,7 +64,37 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
+		var (
+			caCertPath string
+			err        error
+			caCert     []byte
+			cfg        es.ElasticClientConfig
+		)
+		// generate the CA Certificate bytes needed for the elasticsearch Config
+		caCertPath = viper.GetString("elasticCaCertPath")
+		caCert, err = os.ReadFile(caCertPath)
+		if err != nil {
+			return err
+		}
+		cfg = es.ElasticClientConfig{
+			Addresses: []string{fmt.Sprintf(
+				"https://%s:%s",
+				viper.GetString("elasticUrl"),
+				viper.GetString("elasticPort"),
+			)},
+			User:         viper.GetString("elasticUser"),
+			Pass:         viper.GetString("elasticPassword"),
+			ApiKey:       viper.GetString("elasticApiKey"),
+			ServiceToken: viper.GetString("elasticServiceToken"),
+			CaCert:       caCert,
+		}
+		// Generate the client
+		c, err = es.NewElasticClient(&cfg)
+		if err != nil {
+			return err
+		}
+
+		// parse the given commands
 		if runAll {
 			fmt.Println("creating vendor index")
 			if err != nil {
@@ -69,7 +105,7 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 				return err
 			}
 			fmt.Println("creating demo index")
-			err = indexDemo()
+			err = indexDemo(c)
 			if err != nil {
 				return err
 			}
@@ -88,7 +124,7 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 		}
 		if isDemo {
 			fmt.Println("creating demo index")
-			err = indexDemo()
+			err = indexDemo(c)
 			if err != nil {
 				return err
 			}
