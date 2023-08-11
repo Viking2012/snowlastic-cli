@@ -34,6 +34,9 @@ import (
 var (
 	cfgFile string
 	verbose bool
+
+	internalLog *log.Logger
+	externalLog *log.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -49,7 +52,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PreRun: func(cmd *cobra.Command, args []string) {
 		if verbose {
-			log.SetOutput(os.Stdout)
+			internalLog.SetOutput(os.Stdout)
 		}
 	},
 	// Uncomment the following line if your bare application
@@ -76,6 +79,55 @@ func init() {
 	// Flags and configuration settings
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (usually ./snowlastic-cli.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "set verbose output")
+
+	// Snowflake flags
+	rootCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username`)
+	_ = viper.BindPFlag("snowflakeUser", rootCmd.PersistentFlags().Lookup("snowflakeUser"))
+
+	rootCmd.PersistentFlags().String("snowflakePassword", "", `Snowflake Password`)
+	_ = viper.BindPFlag("snowflakePassword", rootCmd.PersistentFlags().Lookup("snowflakePassword"))
+
+	rootCmd.PersistentFlags().String("snowflakeAccount", "", `Snowflake Account name`)
+	_ = viper.BindPFlag("snowflakeAccount", rootCmd.PersistentFlags().Lookup("snowflakeAccount"))
+
+	rootCmd.PersistentFlags().String("snowflakeWarehouse", "", `Snowflake Warehouse name`)
+	_ = viper.BindPFlag("snowflakeWarehouse", rootCmd.PersistentFlags().Lookup("snowflakeWarehouse"))
+
+	rootCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role`)
+	_ = viper.BindPFlag("snowflakeRole", rootCmd.PersistentFlags().Lookup("snowflakeRole"))
+
+	rootCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database`)
+	_ = viper.BindPFlag("snowflakeDatabase", rootCmd.PersistentFlags().Lookup("snowflakeDatabase"))
+
+	rootCmd.PersistentFlags().StringSlice("snowflakeSchemas", []string{}, "A comma seperated list of relevant schemas")
+	_ = viper.BindPFlag("snowflakeSchemas", rootCmd.PersistentFlags().Lookup("snowflakeSchemas"))
+
+	// Elastic flags
+	rootCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch node")
+	_ = viper.BindPFlag("elasticUrl", rootCmd.PersistentFlags().Lookup("elasticUrl"))
+
+	rootCmd.PersistentFlags().Int("elasticPort", 9200, "Elasticsearch node port number")
+	_ = viper.BindPFlag("elasticPort", rootCmd.PersistentFlags().Lookup("elasticPort"))
+
+	rootCmd.PersistentFlags().String("elasticUser", "", "Elasticsearch username")
+	_ = viper.BindPFlag("elasticUser", rootCmd.PersistentFlags().Lookup("elasticUser"))
+
+	rootCmd.PersistentFlags().String("elasticPassword", "", "Elasticsearch user password")
+	_ = viper.BindPFlag("elasticPassword", rootCmd.PersistentFlags().Lookup("elasticPassword"))
+
+	rootCmd.PersistentFlags().String("elasticApiKey", "", "Elasticsearch API Key")
+	_ = viper.BindPFlag("elasticApiKey", rootCmd.PersistentFlags().Lookup("elasticApiKey"))
+
+	rootCmd.PersistentFlags().String("elasticServiceToken", "", "Elasticsearch Bearer Token")
+	_ = viper.BindPFlag("elasticServiceToken", rootCmd.PersistentFlags().Lookup("elasticServiceToken"))
+
+	rootCmd.PersistentFlags().String("elasticCaCertPath", "", "Elasticsearch CA Certificate Path")
+	_ = viper.BindPFlag("elasticCaCertPath", rootCmd.PersistentFlags().Lookup("elasticCaCertPath"))
+
+	internalLog = log.New(os.Stderr, "snowlastic-cli", log.Ldate|log.Ltime)
+	viper.Set("iLog", internalLog)
+	externalLog = log.New(os.Stdout, "snowlastic-cli", log.Ldate|log.Ltime)
+	viper.Set("eLog", externalLog)
 }
 
 // initConfig reads in config file and ENV variables if set.
