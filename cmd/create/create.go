@@ -49,29 +49,29 @@ func init() {
 	// and all subcommands, e.g.:
 	// createCmd.PersistentFlags().String("foo", "", "A help for foo")
 	// Snowflake flags
-	createCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username ("SELECT current_user();")`)
+	createCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username`)
 	_ = viper.BindPFlag("snowflakeUser", createCmd.PersistentFlags().Lookup("snowflakeUser"))
 
 	createCmd.PersistentFlags().String("snowflakePassword", "", `Snowflake Password`)
 	_ = viper.BindPFlag("snowflakePassword", createCmd.PersistentFlags().Lookup("snowflakePassword"))
 
-	createCmd.PersistentFlags().String("snowflakeAccount", "", `Snowflake Account name (in "https://xyz.us-east-1.azure.snowflakecomputing.com/" then "xyz.us-east-1.azure")`)
+	createCmd.PersistentFlags().String("snowflakeAccount", "", `Snowflake Account name`)
 	_ = viper.BindPFlag("snowflakeAccount", createCmd.PersistentFlags().Lookup("snowflakeAccount"))
 
-	createCmd.PersistentFlags().String("snowflakeWarehouse", "", `Snowflake Warehouse name ("SELECT current_warehouse();")`)
+	createCmd.PersistentFlags().String("snowflakeWarehouse", "", `Snowflake Warehouse name`)
 	_ = viper.BindPFlag("snowflakeWarehouse", createCmd.PersistentFlags().Lookup("snowflakeWarehouse"))
 
-	createCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role ("SELECT current_role();")`)
+	createCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role`)
 	_ = viper.BindPFlag("snowflakeRole", createCmd.PersistentFlags().Lookup("snowflakeRole"))
 
-	createCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database (SELECT current_database();)`)
+	createCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database`)
 	_ = viper.BindPFlag("snowflakeDatabase", createCmd.PersistentFlags().Lookup("snowflakeDatabase"))
 
 	createCmd.PersistentFlags().StringSlice("snowflakeSchemas", []string{}, "A comma seperated list of relevant schemas")
 	_ = viper.BindPFlag("snowflakeSchemas", createCmd.PersistentFlags().Lookup("snowflakeSchemas"))
 
 	// Elastic flags
-	createCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch master node")
+	createCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch node")
 	_ = viper.BindPFlag("elasticUrl", createCmd.PersistentFlags().Lookup("elasticUrl"))
 
 	createCmd.PersistentFlags().Int("elasticPort", 9200, "Elasticsearch node port number")
@@ -83,7 +83,7 @@ func init() {
 	createCmd.PersistentFlags().String("elasticPassword", "", "Elasticsearch user password")
 	_ = viper.BindPFlag("elasticPassword", createCmd.PersistentFlags().Lookup("elasticPassword"))
 
-	createCmd.PersistentFlags().String("elasticApiKey", "", "Elasticsearch API Kry")
+	createCmd.PersistentFlags().String("elasticApiKey", "", "Elasticsearch API Key")
 	_ = viper.BindPFlag("elasticApiKey", createCmd.PersistentFlags().Lookup("elasticApiKey"))
 
 	createCmd.PersistentFlags().String("elasticServiceToken", "", "Elasticsearch Bearer Token")
