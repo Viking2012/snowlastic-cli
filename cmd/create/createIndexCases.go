@@ -10,27 +10,6 @@ import (
 var ()
 
 func indexCase(c *elasticsearch.Client) error {
-	//caCertPath := viper.GetString("elasticCaCertPath")
-	//caCert, err := os.ReadFile(caCertPath)
-	//if err != nil {
-	//	return err
-	//}
-	//cfg := es.ElasticClientConfig{
-	//	Addresses: []string{fmt.Sprintf(
-	//		"https://%s:%s",
-	//		viper.GetString("elasticUrl"),
-	//		viper.GetString("elasticPort"),
-	//	)},
-	//	User:         viper.GetString("elasticUser"),
-	//	Pass:         viper.GetString("elasticPassword"),
-	//	ApiKey:       viper.GetString("elasticApiKey"),
-	//	ServiceToken: viper.GetString("elasticServiceToken"),
-	//	CaCert:       caCert,
-	//}
-	//c, err := es.NewElasticClient(&cfg)
-	//if err != nil {
-	//	return err
-	//}
 	res, err := c.Indices.Delete([]string{"case"})
 	if err != nil {
 		return fmt.Errorf("cannot delete index: %s", err)
@@ -54,7 +33,7 @@ func indexCase(c *elasticsearch.Client) error {
 	return nil
 }
 
-const caseIndex string = `{.
+const caseIndex string = `{
   "settings": {
     "analysis": {
       "analyzer": {
