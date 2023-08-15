@@ -22,8 +22,6 @@ THE SOFTWARE.
 package _import
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,8 +30,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/viper"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"snowlastic-cli/pkg/es"
 	"strconv"
@@ -56,7 +52,8 @@ to quickly create a Cobra application.`,
 		var (
 			err        error
 			caCert     []byte
-			caCertPath string = viper.GetString("elasticCaCertPath")
+			caCertPath string
+			cfg        es.ElasticClientConfig
 
 			demos []Demo
 			b     []byte
@@ -69,40 +66,29 @@ to quickly create a Cobra application.`,
 			numIndexed int64
 		)
 
-		if caCertPath != "" {
-			log.Println("reading CA Cert from", caCertPath)
-			caCert, err = os.ReadFile(caCertPath)
-			if err != nil {
-				return err
-			}
+		// generate the CA Certificate bytes needed for the elasticsearch Config
+		caCertPath = viper.GetString("elasticCaCertPath")
+		caCert, err = os.ReadFile(caCertPath)
+		if err != nil {
+			return err
 		}
-
-		rootCAs, _ := x509.SystemCertPool()
-		if rootCAs == nil {
-			rootCAs = x509.NewCertPool()
+		cfg = es.ElasticClientConfig{
+			Addresses: []string{fmt.Sprintf(
+				"https://%s:%s",
+				viper.GetString("elasticUrl"),
+				viper.GetString("elasticPort"),
+			)},
+			User:         viper.GetString("elasticUser"),
+			Pass:         viper.GetString("elasticPassword"),
+			ApiKey:       viper.GetString("elasticApiKey"),
+			ServiceToken: viper.GetString("elasticServiceToken"),
+			CaCert:       caCert,
 		}
-		if ok := rootCAs.AppendCertsFromPEM(caCert); !ok {
-			log.Println("No certs appended, using system certs only")
+		// Generate the client
+		c, err = es.NewElasticClient(&cfg)
+		if err != nil {
+			return err
 		}
-
-		var config elasticsearch.Config = elasticsearch.Config{
-			Addresses: []string{"https://localhost:9200"},
-			Username:  "elastic",
-			Password:  "g+rvu0u5rjAzVx7XaV_t",
-			Transport: &http.Transport{
-				MaxIdleConnsPerHost:   10,
-				ResponseHeaderTimeout: time.Second,
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-				}).DialContext,
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-					RootCAs:            rootCAs,
-				},
-			},
-		}
-		c, err = elasticsearch.NewClient(config)
 		if err != nil {
 			return err
 		}
