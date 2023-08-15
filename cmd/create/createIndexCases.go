@@ -7,8 +7,6 @@ import (
 	"log"
 )
 
-var ()
-
 func indexCase(c *elasticsearch.Client) error {
 	res, err := c.Indices.Delete([]string{"case"})
 	if err != nil {
