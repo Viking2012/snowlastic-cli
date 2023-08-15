@@ -130,7 +130,6 @@ to quickly create a Cobra application.`,
 			)
 		}
 		return nil
-		return nil
 	},
 }
 
@@ -145,11 +144,11 @@ func init() {
 	// is called directly, e.g.:
 	// fileCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	fileCmd.Flags().String("identifier", "id", "Fieldname for unique identifier of each record")
-	fileCmd.MarkFlagRequired("identifier")
+	_ = fileCmd.MarkFlagRequired("identifier")
 	_ = viper.BindPFlag("identifier", fileCmd.Flags().Lookup("identifier"))
 
 	fileCmd.Flags().String("index", "", "index into which to import records")
-	fileCmd.MarkFlagRequired("index")
+	_ = fileCmd.MarkFlagRequired("index")
 	_ = viper.BindPFlag("index", fileCmd.Flags().Lookup("index"))
 }
 
