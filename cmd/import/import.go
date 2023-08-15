@@ -48,6 +48,7 @@ func Add() *cobra.Command {
 func init() {
 	importCmd.AddCommand(demoCmd)
 	importCmd.AddCommand(casesCmd)
+	importCmd.AddCommand(fileCmd)
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

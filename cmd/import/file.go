@@ -19,31 +19,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package create
+package _import
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	icm_orm "github.com/alexander-orban/icm_goapi/orm"
+	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
 	"os"
 	"snowlastic-cli/pkg/es"
+	"time"
 )
 
-var (
-	isVendor   bool
-	isCustomer bool
-	isDemo     bool
-	runAll     bool
-	fromFile   string
-
-	c *elasticsearch.Client
-)
-
-// indexCmd represents the index command
-var indexCmd = &cobra.Command{
-	Use:   "index",
+// fileCmd represents the file command
+var fileCmd = &cobra.Command{
+	Use:   "file",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -51,24 +46,22 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
-			return errors.New("at least one flag is required by the index command")
-		}
-		if fromFile != "" && len(args) == 0 {
-			return errors.New(`you must provide an index name when creating an anonymous index from a file
-Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index name>
-
-`)
-		}
-		return nil
-	},
+	Args: cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
 			caCertPath string
 			err        error
 			caCert     []byte
 			cfg        es.ElasticClientConfig
+			c          *elasticsearch.Client
+
+			filePath  string = args[0]
+			indexName string = viper.GetString("identifier")
+			As        []Anon
+
+			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
+			numErrors  int64
+			numIndexed int64
 		)
 		// generate the CA Certificate bytes needed for the elasticsearch Config
 		caCertPath = viper.GetString("elasticCaCertPath")
@@ -94,68 +87,97 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 			return err
 		}
 
-		// parse the given commands
-		if runAll {
-			fmt.Println("creating vendor index")
-			if err != nil {
-				return err
-			}
-			fmt.Println("creating customer index")
-			if err != nil {
-				return err
-			}
-			fmt.Println("creating demo index")
-			err = indexDemo(c)
-			if err != nil {
-				return err
-			}
+		log.Println("reading file", filePath)
+		b, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
 		}
-		if isVendor {
-			fmt.Println("creating vendor index")
-			if err != nil {
-				return err
-			}
+		log.Println("unmarshalling records")
+		err = json.Unmarshal(b, &As)
+		if err != nil {
+			return err
 		}
-		if isCustomer {
-			fmt.Println("creating customer index")
-			if err != nil {
-				return err
+
+		start := time.Now().UTC()
+		go func() {
+			for i := range As {
+				docs <- icm_orm.ICMEntity(&As[i])
 			}
+			close(docs)
+		}()
+
+		batches := es.BatchEntities(docs, es.BulkInsertSize)
+		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName)
+		if err != nil {
+			return err
 		}
-		if isDemo {
-			fmt.Println("creating demo index")
-			err = indexDemo(c)
-			if err != nil {
-				return err
-			}
+
+		dur := time.Since(start)
+		if numErrors > 0 {
+			return errors.New(fmt.Sprintf(
+				"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
+				humanize.Comma(int64(numIndexed)),
+				humanize.Comma(int64(numErrors)),
+				dur.Truncate(time.Millisecond),
+				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+			))
+		} else {
+			log.Printf(
+				"Sucessfuly indexed [%s] documents in %s (%s docs/sec)",
+				humanize.Comma(int64(numIndexed)),
+				dur.Truncate(time.Millisecond),
+				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+			)
 		}
-		if fromFile != "" {
-			fmt.Printf("creating index '%s' from file\n", args[0])
-			err = indexFile(c, fromFile, args[0])
-			if err != nil {
-				return err
-			}
-		}
-		return err
+		return nil
+		return nil
 	},
 }
 
 func init() {
-	//createCmd.AddCommand(indexCmd)
-
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// indexCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// fileCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// indexCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	//indexCmd.Flags().BoolVarP(&isVendor, "vendor", "v", false, "create a standard vendor index")
-	//indexCmd.Flags().BoolVarP(&isCustomer, "customer", "c", false, "create a standard customer index")
-	indexCmd.Flags().BoolVarP(&isDemo, "demo", "d", false, "create a standard demo index")
-	indexCmd.Flags().BoolVarP(&runAll, "all", "", false, "create all standard indices")
-	indexCmd.Flags().StringVarP(&fromFile, "from", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
-	//indexCmd.Flags().BoolP("demo", "", false, "create a demo index")
+	// fileCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	fileCmd.Flags().String("identifier", "id", "Fieldname for unique identifier of each record")
+	fileCmd.MarkFlagRequired("identifier")
+	_ = viper.BindPFlag("identifier", fileCmd.Flags().Lookup("identifier"))
+
+	fileCmd.Flags().String("index", "", "index into which to import records")
+	fileCmd.MarkFlagRequired("index")
+	_ = viper.BindPFlag("index", fileCmd.Flags().Lookup("index"))
+}
+
+type m map[string]interface{}
+type Anon struct {
+	m
+}
+
+func (a *Anon) IsICMEntity() bool { return true }
+func (a *Anon) GetID() string {
+	var (
+		idField string
+		s       string
+	)
+	idField = viper.GetString("identifier")
+	s = fmt.Sprintf("%s", a.m[idField])
+	return s
+}
+func (a *Anon) MarshalJSON() ([]byte, error) {
+	j, err := json.Marshal(a.m)
+	return j, err
+}
+func (a *Anon) UnmarshalJSON(data []byte) error {
+	var m map[string]interface{}
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return err
+	}
+	a.m = m
+	return nil
 }
