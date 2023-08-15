@@ -34,9 +34,6 @@ import (
 var (
 	cfgFile string
 	verbose bool
-
-	internalLog *log.Logger
-	externalLog *log.Logger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -50,9 +47,11 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		log.SetOutput(os.Stderr)
 		if verbose {
-			internalLog.SetOutput(os.Stdout)
+			log.SetOutput(os.Stdout)
+			log.Println("verbose setting received...")
 		}
 	},
 	// Uncomment the following line if your bare application
@@ -123,11 +122,6 @@ func init() {
 
 	rootCmd.PersistentFlags().String("elasticCaCertPath", "", "Elasticsearch CA Certificate Path")
 	_ = viper.BindPFlag("elasticCaCertPath", rootCmd.PersistentFlags().Lookup("elasticCaCertPath"))
-
-	internalLog = log.New(os.Stderr, "snowlastic-cli", log.Ldate|log.Ltime)
-	viper.Set("iLog", internalLog)
-	externalLog = log.New(os.Stdout, "snowlastic-cli", log.Ldate|log.Ltime)
-	viper.Set("eLog", externalLog)
 }
 
 // initConfig reads in config file and ENV variables if set.
