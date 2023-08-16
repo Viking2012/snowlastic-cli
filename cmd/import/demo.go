@@ -1,4 +1,167 @@
-[
+/*
+Copyright © 2023 Alexander Orban <alexander.orban@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+package _import
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	icm_orm "github.com/alexander-orban/icm_goapi/orm"
+	"github.com/dustin/go-humanize"
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/spf13/viper"
+	"log"
+	"os"
+	"snowlastic-cli/pkg/es"
+	"strconv"
+	"time"
+
+	"github.com/spf13/cobra"
+)
+
+// demoCmd represents the demo command
+var demoCmd = &cobra.Command{
+	Use:   "demo",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var (
+			err        error
+			caCert     []byte
+			caCertPath string
+			cfg        es.ElasticClientConfig
+
+			demos []Demo
+			b     []byte
+			docs  = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
+			c     *elasticsearch.Client
+
+			indexName = "demo"
+
+			numErrors  int64
+			numIndexed int64
+		)
+
+		// generate the CA Certificate bytes needed for the elasticsearch Config
+		caCertPath = viper.GetString("elasticCaCertPath")
+		caCert, err = os.ReadFile(caCertPath)
+		if err != nil {
+			return err
+		}
+		cfg = es.ElasticClientConfig{
+			Addresses: []string{fmt.Sprintf(
+				"https://%s:%s",
+				viper.GetString("elasticUrl"),
+				viper.GetString("elasticPort"),
+			)},
+			User:         viper.GetString("elasticUser"),
+			Pass:         viper.GetString("elasticPassword"),
+			ApiKey:       viper.GetString("elasticApiKey"),
+			ServiceToken: viper.GetString("elasticServiceToken"),
+			CaCert:       caCert,
+		}
+		// Generate the client
+		c, err = es.NewElasticClient(&cfg)
+		if err != nil {
+			return err
+		}
+
+		// Get demos array
+		log.Println("reading demos json")
+		b = []byte(_demos)
+		log.Println("unmarshalling demos into []Demo")
+		err = json.Unmarshal(b, &demos)
+		if err != nil {
+			return errors.New(fmt.Sprintf("error in unmarshalling demos json: %s", err))
+		}
+
+		start := time.Now().UTC()
+		go func() {
+			// we cannot use _, demo := range demos here, since we need to pass
+			// a pointer to the element as an ICMEntity. When using _, demo := range demos
+			// the pointer will always point to the last document in the list.
+			// Instead we point directly to the entry in the slice of demos we've created above
+			for i := range demos {
+				docs <- icm_orm.ICMEntity(&demos[i])
+			}
+			close(docs)
+		}()
+
+		batches := es.BatchEntities(docs, es.BulkInsertSize)
+		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName)
+		if err != nil {
+			return err
+		}
+
+		dur := time.Since(start)
+		if numErrors > 0 {
+			return errors.New(fmt.Sprintf(
+				"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
+				humanize.Comma(int64(numIndexed)),
+				humanize.Comma(int64(numErrors)),
+				dur.Truncate(time.Millisecond),
+				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+			))
+		} else {
+			log.Printf(
+				"Sucessfuly indexed [%s] documents in %s (%s docs/sec)",
+				humanize.Comma(int64(numIndexed)),
+				dur.Truncate(time.Millisecond),
+				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+			)
+		}
+		return nil
+	},
+}
+
+func init() {
+	importCmd.AddCommand(demoCmd)
+	// Here you will define your flags and configuration settings.
+
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// demoCmd.PersistentFlags().String("foo", "", "A help for foo")
+
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// demoCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+type Demo struct {
+	ID          int    `json:"id"`
+	SearchTerm  string `json:"search-term"`
+	Value       string `json:"value"`
+	ShouldMatch bool   `json:"should-match"`
+}
+
+func (d *Demo) IsICMEntity() bool { return true }
+func (d *Demo) GetID() string     { return strconv.Itoa(d.ID) }
+
+const _demos string = `[
   {
     "id": 1,
     "search-term": "against /5 law!",
@@ -654,3 +817,4 @@
     "should-match": true
   }
 ]
+`

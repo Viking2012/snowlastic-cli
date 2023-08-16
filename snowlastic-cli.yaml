@@ -1,0 +1,66 @@
+# Note:
+# Instead of defining any of the below variables, any of the keys below
+# may be created and read from an environment variable. Tbis is especially
+# useful when storing credentials such as usernames or passwords.
+# i.e. instead of changing the "elasticPassword" setting below, you may
+# create an environment variable with the same name and containing the
+# appropriate value. When using environment variables, you should remove
+# or comment out the entry in this file to remove the potential for conflicts.
+
+#     _____                     ______      __           ______              __           __  _       __
+#   / ___/____  ____ _      __/ __/ /___ _/ /_____     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____
+#   \__ \/ __ \/ __ \ | /| / / /_/ / __ `/ //_/ _ \   / /   / ___/ _ \/ __  / _ \/ __ \/ __/ / __ `/ / ___/
+#  ___/ / / / / /_/ / |/ |/ / __/ / /_/ / ,< /  __/  / /___/ /  /  __/ /_/ /  __/ / / / /_/ / /_/ / (__  )
+# /____/_/ /_/\____/|__/|__/_/ /_/\__,_/_/|_|\___/   \____/_/   \___/\__,_/\___/_/ /_/\__/_/\__,_/_/____/
+
+# from a snowflake terminal, run
+# SELECT current_user();
+snowflakeUser: "jsmith"
+snowflakePassword:  "mypassword"
+
+#in "https://xyz.us-east-1.azure.snowflakecomputing.com/" then "xyz.us-east-1.azure"
+snowflakeAccount: "test-organization-test-account"
+
+# SELECT current_warehouse();
+snowflakeWarehouse: "myWH"
+# SELECT current_role();
+snowflakeRole: "myRole"
+# SELECT current_database();
+snowflakeDatabase: "myDB"
+snowflakeSchemas: 
+  - test_schema1
+  - test_schema2
+  - test_schema3
+  - test_schema4
+
+#      ________           __  _      _____                      __       ______              __           __  _       __
+#     / ____/ /___ ______/ /_(_)____/ ___/___  ____ ___________/ /_     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____
+#    / __/ / / __ `/ ___/ __/ / ___/\__ \/ _ \/ __ `/ ___/ ___/ __ \   / /   / ___/ _ \/ __  / _ \/ __ \/ __/ / __ `/ / ___/
+#   / /___/ / /_/ (__  ) /_/ / /__ ___/ /  __/ /_/ / /  / /__/ / / /  / /___/ /  /  __/ /_/ /  __/ / / / /_/ / /_/ / (__  )
+#  /_____/_/\__,_/____/\__/_/\___//____/\___/\__,_/_/   \___/_/ /_/   \____/_/   \___/\__,_/\___/_/ /_/\__/_/\__,_/_/____/
+# elastic service location
+# localhost or server name
+elasticUrl: "localhost"
+# usually 9200
+elasticPort: 9200
+
+# credentials
+# because passwords would need to be stored here in the clear,
+# it is recommended that you use either environment variables or
+# generate an API key. See the elastic documents for details:
+# https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-create-api-key.html
+
+# elastic or custom user
+elasticUser: "jsmith"
+elasticPassword: "elasticPassword"
+
+# CA Certificate path
+# - use only forward slashes in the filepath
+# - usually best if fully qualified, but can be relative to the snowlastic-cli binary/executable
+elasticCaCertPath: "./path/to/http_ca.crt"
+
+# See https://www.elastic.co/guide/en/elasticsearch/reference/current/service-tokens-command.html
+elasticServiceToken: "token-value"
+
+# the encoded part of the API Key response
+elasticApiKey: "api-key-value"
