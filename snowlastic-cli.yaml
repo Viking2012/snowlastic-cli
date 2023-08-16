@@ -57,7 +57,7 @@ elasticPassword: "elasticPassword"
 # CA Certificate path
 # - use only forward slashes in the filepath
 # - usually best if fully qualified, but can be relative to the snowlastic-cli binary/executable
-elasticCaCertPath: "./ignore/local_http_ca.crt"
+elasticCaCertPath: "./path/to/http_ca.crt"
 
 # See https://www.elastic.co/guide/en/elasticsearch/reference/current/service-tokens-command.html
 elasticServiceToken: "token-value"
