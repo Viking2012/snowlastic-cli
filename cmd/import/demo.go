@@ -89,9 +89,6 @@ to quickly create a Cobra application.`,
 		if err != nil {
 			return err
 		}
-		if err != nil {
-			return err
-		}
 
 		// Get demos array
 		log.Println("reading demos json")
