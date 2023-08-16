@@ -55,7 +55,7 @@ var demoCmd = &cobra.Command{
 			docs  = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 			c     *elasticsearch.Client
 
-			indexName = "demo"
+			indexName = "demos"
 
 			numErrors  int64
 			numIndexed int64

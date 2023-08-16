@@ -56,7 +56,7 @@ var casesCmd = &cobra.Command{
 
 			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 
-			indexName = "case"
+			indexName = "cases"
 
 			numErrors  int64
 			numIndexed int64
@@ -80,7 +80,7 @@ var casesCmd = &cobra.Command{
 		start := time.Now().UTC()
 		go func() {
 			log.Println("reading cases from database")
-			rows, err := db.Query(query)
+			rows, err := db.Query(caseQuery)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -214,7 +214,7 @@ func init() {
 	// import/casesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-const query string = `WITH CASE_DETAILS AS (
+const caseQuery string = `WITH CASE_DETAILS AS (
     SELECT 
         "Case ID" AS CASE_ID,
         "Case Number"       AS CASE_NUMBER,

@@ -8,7 +8,7 @@ import (
 )
 
 func indexCase(c *elasticsearch.Client) error {
-	res, err := c.Indices.Delete([]string{"case"})
+	res, err := c.Indices.Delete([]string{"cases"})
 	if err != nil {
 		return fmt.Errorf("cannot delete index: %s", err)
 	}
@@ -19,7 +19,7 @@ func indexCase(c *elasticsearch.Client) error {
 	}
 
 	b := []byte(caseIndex)
-	res, err = c.Indices.Create("case", c.Indices.Create.WithBody(bytes.NewReader(b)))
+	res, err = c.Indices.Create("cases", c.Indices.Create.WithBody(bytes.NewReader(b)))
 	if err != nil {
 		return fmt.Errorf("cannot create index: %s", err)
 	}
