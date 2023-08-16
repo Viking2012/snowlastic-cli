@@ -40,13 +40,14 @@ var (
 var rootCmd = &cobra.Command{
 	Use:     "snowlastic-cli",
 	Version: "1.0.0",
-	Short:   "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short:   "Manage, update, and administer an elasticsearch server",
+	Long: `Interact with an elasticsearch server, including indexing documents
+from a snowflake database. For example:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Create an elasticsearch index from either default settings or a json file.
+Index documents from either a snowflake database or a json file.
+
+TODO: Search the elasticsearch index`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetOutput(os.Stderr)
 		if verbose {

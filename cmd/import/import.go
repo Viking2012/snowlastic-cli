@@ -29,13 +29,10 @@ import (
 // importCmd represents the import command
 var importCmd = &cobra.Command{
 	Use:   "import",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Import documents into an elasticsearch index",
+	Long: `A document is a representation of any kind of record. This tool allows
+for importing data from pre-defined sources (such as snowflake tables/views) or 
+from a json file containing a list of documents.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("import called")
 	},

@@ -28,13 +28,11 @@ import (
 // CreateCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Create an elasticsearch index",
+	Long: `This command allows you to create (or delet and re-create) an 
+elasticsearch index from either default settings or from a json file
+containing an elasticsearch index setting.
+(see https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html)`,
 }
 
 func init() {
