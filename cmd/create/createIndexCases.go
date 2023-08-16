@@ -56,14 +56,41 @@ const caseIndex string = `{
       "branch_number": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
       "business_case": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
       "case_city": 				{"type": "keyword",	"normalizer": "caseNormalizer"},
-      "case_comments": 			{"type": "text"                                   },
+      "case_comments": 			{"type": "nested","properties":{
+									"followup_question_id": 	{ "type": "keyword"	},
+									"is_comment":				{ "type": "boolean" },
+									"followup_question_text": 	{ "type": "text"  	},
+									"followup_question_date":	{ "type": "keyword" },
+									"followup_question_asker":	{ "type": "keyword" },
+									"answer_text": 				{ "type": "text"  	}
+									"answer_date":				{ "type": "date"}
+								}},
       "case_country": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
-      "case_details": 			{"type": "text"                                   },
-      "case_files": 			{"type": "text"                                   },
+      "case_details": 			{"type": "text",	"normalizer": "caseNormalizer"},
+      "case_files": 			{"type": "nested","properties":{
+									"file_id":		{ "type": "keyword" }
+									"file_name":	{ "type": "text"  }
+								}},
       "case_number": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
-      "case_participants": 		{"type": "text"                                   },
+      "case_participants": 		{"type": "nested","properties":{
+									"participant_id": 			{ "type":"keyword"},
+									"participant_prefix": 		{ "type":"keyword"},
+									"participant_name": 		{ "type":"keyword"},
+									"participant_hr_id": 		{ "type":"keyword"},
+									"participant_relationship": { "type":"keyword"},
+									"participant_role": 		{ "type":"keyword"},
+									"outcome": 					{ "type":"text"}
+								}},
       "case_postal_code": 		{"type": "keyword",	"normalizer": "caseNormalizer"},
-      "case_questions": 		{"type": "text"                                   },
+      "case_questions": 		{"type": "nested","properties":{
+									"followup_question_id": 	{"type":"keyword"},
+									"is_comment": 				{"type":"boolean"},
+									"followup_question_text": 	{"type":"text"},
+									"followup_question_date": 	{"type":"date"},
+									"followup_question_asker":	{"type":"keyword"},
+									"answer_text": 				{"type":"text"},
+									"answer_date": 				{"type":"date"}
+								}},
       "case_region": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
       "case_state_province": 	{"type": "keyword",	"normalizer": "caseNormalizer"},
       "case_status": 			{"type": "keyword",	"normalizer": "caseNormalizer"},
