@@ -27,18 +27,24 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
 	"os"
 	"snowlastic-cli/pkg/es"
 )
 
-var (
-	isVendor   bool
-	isCustomer bool
-	isDemo     bool
-	runAll     bool
-	fromFile   string
+type run struct {
+	f    func(*elasticsearch.Client) error
+	name string
+}
 
-	c *elasticsearch.Client
+var (
+	isCase   bool
+	isDemo   bool
+	runAll   bool
+	fromFile string
+
+	c    *elasticsearch.Client
+	runs []run
 )
 
 // indexCmd represents the index command
@@ -52,7 +58,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if !isVendor && !isCustomer && !isDemo && fromFile == "" {
+		if cmd.Flags().NFlag() == 0 {
 			return errors.New("at least one flag is required by the index command")
 		}
 		if fromFile != "" && len(args) == 0 {
@@ -96,47 +102,35 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 
 		// parse the given commands
 		if runAll {
-			fmt.Println("creating vendor index")
-			if err != nil {
-				return err
-			}
-			fmt.Println("creating customer index")
-			if err != nil {
-				return err
-			}
-			fmt.Println("creating demo index")
-			err = indexDemo(c)
-			if err != nil {
-				return err
+			runs = []run{
+				{f: indexDemo, name: "demo"},
+				{f: indexCase, name: "case"},
 			}
 		}
-		if isVendor {
-			fmt.Println("creating vendor index")
-			if err != nil {
-				return err
-			}
+
+		if isDemo && !runAll {
+			runs = append(runs, run{f: indexDemo, name: "demo"})
 		}
-		if isCustomer {
-			fmt.Println("creating customer index")
-			if err != nil {
-				return err
-			}
+		if isCase && !runAll {
+			runs = append(runs, run{f: indexCase, name: "case"})
 		}
-		if isDemo {
-			fmt.Println("creating demo index")
-			err = indexDemo(c)
-			if err != nil {
-				return err
-			}
-		}
-		if fromFile != "" {
+		if fromFile != "" && !runAll {
 			fmt.Printf("creating index '%s' from file\n", args[0])
 			err = indexFile(c, fromFile, args[0])
 			if err != nil {
 				return err
 			}
 		}
-		return err
+
+		for _, run := range runs {
+			log.Printf("creating %s index", run.name)
+			err := run.f(c)
+			if err != nil {
+				return nil
+			}
+		}
+
+		return nil
 	},
 }
 
@@ -152,10 +146,10 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// indexCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	//indexCmd.Flags().BoolVarP(&isVendor, "vendor", "v", false, "create a standard vendor index")
-	//indexCmd.Flags().BoolVarP(&isCustomer, "customer", "c", false, "create a standard customer index")
-	indexCmd.Flags().BoolVarP(&isDemo, "demo", "d", false, "create a standard demo index")
 	indexCmd.Flags().BoolVarP(&runAll, "all", "", false, "create all standard indices")
+
+	indexCmd.Flags().BoolVarP(&isCase, "case", "c", false, "create a standard Navex case index")
+	indexCmd.Flags().BoolVarP(&isDemo, "demo", "d", false, "create a standard demo index")
+
 	indexCmd.Flags().StringVarP(&fromFile, "from", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
-	//indexCmd.Flags().BoolP("demo", "", false, "create a demo index")
 }
