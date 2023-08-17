@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
+	"math"
 	"os"
 	es "snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
@@ -76,6 +77,19 @@ var casesCmd = &cobra.Command{
 			return err
 		}
 		defer db.Close()
+
+		var rowCount int64
+		var countQuery = "SELECT COUNT(1) FROM (" + string(caseQuery) + ")"
+		rows, err := db.Query(countQuery)
+		if err != nil {
+			return err
+		}
+		rows.Next()
+		err = rows.Scan(&rowCount)
+		if err != nil {
+			return err
+		}
+		numBatches := math.Ceil(float64(rowCount) / es.BulkInsertSize)
 
 		start := time.Now().UTC()
 		go func() {
@@ -142,7 +156,7 @@ var casesCmd = &cobra.Command{
 				); err != nil {
 					log.Fatal(err)
 				}
-				fmt.Printf("id: %-15s notes: %4d questions: %4d files: %4d participants: %4d\n", c.GetID(), len(c.CaseNotes), len(c.CaseQuestions), len(c.CaseFiles), len(c.CaseParticipants))
+				//fmt.Printf("id: %-15s notes: %4d questions: %4d files: %4d participants: %4d\n", c.GetID(), len(c.CaseNotes), len(c.CaseQuestions), len(c.CaseFiles), len(c.CaseParticipants))
 				docs <- icm_orm.ICMEntity(&c)
 			}
 			close(docs)
@@ -173,10 +187,9 @@ var casesCmd = &cobra.Command{
 			return err
 		}
 
-		log.Println("batching cases")
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
 		log.Println("indexing cases")
-		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName)
+		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}

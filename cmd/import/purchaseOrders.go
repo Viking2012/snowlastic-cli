@@ -29,14 +29,14 @@ import (
 	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
+	"math"
 	"os"
 	"snowlastic-cli/pkg/es"
 	"snowlastic-cli/pkg/snowflake"
 	"time"
-
-	"github.com/spf13/cobra"
 )
 
 // purchaseOrdersCmd represents the import/purchaseOrders command
@@ -57,7 +57,7 @@ var purchaseOrdersCmd = &cobra.Command{
 
 			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 
-			indexName = "purchaseOrders"
+			indexName = "purchaseorders"
 
 			numErrors  int64
 			numIndexed int64
@@ -65,38 +65,47 @@ var purchaseOrdersCmd = &cobra.Command{
 
 		log.Println("connecting to database")
 		var tmp = icm_orm.PurchaseOrder{Flags: &icm_orm.PurchaseOrderFlags{}}
+		var query = icm_encoding.MarshalToSelect(&tmp, "PURCHASEORDERS_FLAGGED", false)
+		db, err = snowflake.NewDB(snowflake.Config{
+			Account:   viper.GetString("snowflakeAccount"),
+			Warehouse: viper.GetString("snowflakeWarehouse"),
+			Database:  viper.GetString("snowflakeDatabase"),
+			Schema:    "CMP",
+			User:      viper.GetString("snowflakeUser"),
+			Password:  viper.GetString("snowflakePassword"),
+			Role:      viper.GetString("snowflakeRole"),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+
+		var rowCount int64
+		var countQuery = "SELECT COUNT(1) FROM (" + string(query) + ")"
+		rows, err := db.Query(countQuery)
+		if err != nil {
+			return err
+		}
+		rows.Next()
+		err = rows.Scan(&rowCount)
+		if err != nil {
+			return err
+		}
+		numBatches := math.Ceil(float64(rowCount) / es.BulkInsertSize)
 
 		start := time.Now().UTC()
 		go func() {
-			for _, schema := range viper.GetStringSlice("snowflakeSchemas") {
-
-				var query = icm_encoding.MarshalToSelect(&tmp, viper.GetString("snowflakeDatabase")+"."+schema, false)
-				db, err = snowflake.NewDB(snowflake.Config{
-					Account:   viper.GetString("snowflakeAccount"),
-					Warehouse: viper.GetString("snowflakeWarehouse"),
-					Database:  viper.GetString("snowflakeDatabase"),
-					Schema:    schema,
-					User:      viper.GetString("snowflakeUser"),
-					Password:  viper.GetString("snowflakePassword"),
-					Role:      viper.GetString("snowflakeRole"),
-				})
-				if err != nil {
+			log.Println("reading POs from database")
+			rows, err := db.Query(string(query))
+			if err != nil {
+				log.Fatal(err)
+			}
+			for rows.Next() {
+				var e icm_orm.ICMEntity
+				if e, err = icm_orm.PurchaseOrderFromRow(rows); err != nil {
 					log.Fatal(err)
 				}
-				defer db.Close()
-
-				log.Println("reading POs from database schema", schema)
-				rows, err := db.Query(string(query))
-				if err != nil {
-					log.Fatal(err)
-				}
-				for rows.Next() {
-					var e icm_orm.ICMEntity
-					if e, err = icm_orm.PurchaseOrderFromRow(rows); err != nil {
-						log.Fatal(err)
-					}
-					docs <- e
-				}
+				docs <- e
 			}
 			close(docs)
 		}()
@@ -129,7 +138,7 @@ var purchaseOrdersCmd = &cobra.Command{
 		log.Println("batching cases")
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
 		log.Println("indexing cases")
-		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName)
+		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}
@@ -145,7 +154,7 @@ var purchaseOrdersCmd = &cobra.Command{
 			))
 		} else {
 			log.Printf(
-				"Sucessfuly indexed [%s] documents in %s (%s docs/sec)",
+				"Successfully indexed [%s] documents in %s (%s docs/sec)",
 				humanize.Comma(int64(numIndexed)),
 				dur.Truncate(time.Millisecond),
 				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),

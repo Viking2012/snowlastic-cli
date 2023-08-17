@@ -13,7 +13,7 @@ func indexCase(c *elasticsearch.Client) error {
 		return fmt.Errorf("cannot delete index: %s", err)
 	}
 	if res.IsError() {
-		log.Println("error when deleting index", res.String())
+		log.Println("warning when deleting index", res.String())
 	} else {
 		log.Println(res.String())
 	}

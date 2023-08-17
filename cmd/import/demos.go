@@ -30,6 +30,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/viper"
 	"log"
+	"math"
 	"os"
 	"snowlastic-cli/pkg/es"
 	"strconv"
@@ -40,7 +41,7 @@ import (
 
 // demoCmd represents the demo command
 var demoCmd = &cobra.Command{
-	Use:   "demo",
+	Use:   "demos",
 	Short: "Index a pre-defined list of documents into the `demo` index",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -107,7 +108,7 @@ var demoCmd = &cobra.Command{
 		}()
 
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName)
+		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName, int64(math.Ceil(float64(len(demos))/es.BulkInsertSize)))
 		if err != nil {
 			return err
 		}

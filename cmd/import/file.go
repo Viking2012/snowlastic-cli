@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
+	"math"
 	"os"
 	"snowlastic-cli/pkg/es"
 	"time"
@@ -102,7 +103,7 @@ var fileCmd = &cobra.Command{
 		}()
 
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName)
+		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName, int64(math.Ceil(float64(len(As))/es.BulkInsertSize)))
 		if err != nil {
 			return err
 		}
