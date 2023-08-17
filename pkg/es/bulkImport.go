@@ -8,6 +8,7 @@ import (
 	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/schollz/progressbar/v3"
 	"log"
 )
 
@@ -43,8 +44,12 @@ func BatchEntities(docs <-chan icm_orm.ICMEntity, batchSize int) chan []icm_orm.
 	return batches
 }
 
-func BulkImport(es *elasticsearch.Client, batches <-chan []icm_orm.ICMEntity, indexName string) (numIndexed, numErrors int64, err error) {
+func BulkImport(es *elasticsearch.Client, batches <-chan []icm_orm.ICMEntity, indexName string, numBatches int64) (numIndexed, numErrors int64, err error) {
+	var numProcessed int64 = 1
+	bar := progressbar.Default(numBatches)
+
 	for batch := range batches {
+		//log.Printf("processing batch #%-5d (%5.1f%%)\n", numProcessed, (float64(numProcessed)/float64(numBatches))*100)
 		var buf bytes.Buffer // to collect the bytes of the batch payload
 		for _, c := range batch {
 			// Prepare the metadata payload
@@ -68,6 +73,8 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []icm_orm.ICMEntity, in
 		}
 		numIndexed += int64(indexCount)
 		numErrors += int64(errorCount)
+		numProcessed++
+		_ = bar.Add(1)
 	}
 
 	return numIndexed, numErrors, nil

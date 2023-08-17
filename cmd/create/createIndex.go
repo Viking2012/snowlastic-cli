@@ -126,7 +126,7 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 			log.Printf("creating %s index", run.name)
 			err := run.f(c)
 			if err != nil {
-				return nil
+				return err
 			}
 		}
 
