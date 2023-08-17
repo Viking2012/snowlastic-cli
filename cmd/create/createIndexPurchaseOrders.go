@@ -1,4 +1,37 @@
-{
+package create
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/elastic/go-elasticsearch/v8"
+	"log"
+)
+
+func indexPurchaseOrder(c *elasticsearch.Client) error {
+	res, err := c.Indices.Delete([]string{"purchaseOrders"})
+	if err != nil {
+		return fmt.Errorf("cannot delete index: %s", err)
+	}
+	if res.IsError() {
+		log.Println("error when deleting index", res.String())
+	} else {
+		log.Println(res.String())
+	}
+
+	b := []byte(purchaseOrderIndex)
+	res, err = c.Indices.Create("purchaseOrders", c.Indices.Create.WithBody(bytes.NewReader(b)))
+	if err != nil {
+		return fmt.Errorf("cannot create index: %s", err)
+	}
+
+	if res.IsError() {
+		return fmt.Errorf("cannot create index, got an error response code: %s\n", res.String())
+	}
+	log.Println("successfully created an index")
+	return nil
+}
+
+var purchaseOrderIndex = `{
   "settings": {
     "analysis": {
       "analyzer": {
@@ -175,4 +208,4 @@
     }
   }
 }
-
+`

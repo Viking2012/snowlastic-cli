@@ -10,28 +10,7 @@ import (
 var ()
 
 func indexDemo(c *elasticsearch.Client) error {
-	//caCertPath := viper.GetString("elasticCaCertPath")
-	//caCert, err := os.ReadFile(caCertPath)
-	//if err != nil {
-	//	return err
-	//}
-	//cfg := es.ElasticClientConfig{
-	//	Addresses: []string{fmt.Sprintf(
-	//		"https://%s:%s",
-	//		viper.GetString("elasticUrl"),
-	//		viper.GetString("elasticPort"),
-	//	)},
-	//	User:         viper.GetString("elasticUser"),
-	//	Pass:         viper.GetString("elasticPassword"),
-	//	ApiKey:       viper.GetString("elasticApiKey"),
-	//	ServiceToken: viper.GetString("elasticServiceToken"),
-	//	CaCert:       caCert,
-	//}
-	//c, err := es.NewElasticClient(&cfg)
-	//if err != nil {
-	//	return err
-	//}
-	res, err := c.Indices.Delete([]string{"demo"})
+	res, err := c.Indices.Delete([]string{"demos"})
 	if err != nil {
 		return fmt.Errorf("cannot delete index: %s", err)
 	}
@@ -42,7 +21,7 @@ func indexDemo(c *elasticsearch.Client) error {
 	}
 
 	b := []byte(demoIndex)
-	res, err = c.Indices.Create("demo", c.Indices.Create.WithBody(bytes.NewReader(b)))
+	res, err = c.Indices.Create("demos", c.Indices.Create.WithBody(bytes.NewReader(b)))
 	if err != nil {
 		return fmt.Errorf("cannot create index: %s", err)
 	}

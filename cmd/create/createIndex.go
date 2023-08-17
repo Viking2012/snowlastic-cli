@@ -40,6 +40,7 @@ type run struct {
 var (
 	isCase   bool
 	isDemo   bool
+	isPO     bool
 	runAll   bool
 	fromFile string
 
@@ -98,16 +99,20 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 		// parse the given commands
 		if runAll {
 			runs = []run{
-				{f: indexDemo, name: "demo"},
-				{f: indexCase, name: "case"},
+				{f: indexDemo, name: "demos"},
+				{f: indexCase, name: "cases"},
+				{f: indexPurchaseOrder, name: "POs"},
 			}
 		}
 
 		if isDemo && !runAll {
-			runs = append(runs, run{f: indexDemo, name: "demo"})
+			runs = append(runs, run{f: indexDemo, name: "demos"})
 		}
 		if isCase && !runAll {
-			runs = append(runs, run{f: indexCase, name: "case"})
+			runs = append(runs, run{f: indexCase, name: "cases"})
+		}
+		if isPO && !runAll {
+			runs = append(runs, run{f: indexPurchaseOrder, name: "POs"})
 		}
 		if fromFile != "" && !runAll {
 			fmt.Printf("creating index '%s' from file\n", args[0])
@@ -143,8 +148,9 @@ func init() {
 	// indexCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	indexCmd.Flags().BoolVarP(&runAll, "all", "", false, "create all standard indices")
 
-	indexCmd.Flags().BoolVarP(&isCase, "case", "c", false, "create a standard Navex case index")
-	indexCmd.Flags().BoolVarP(&isDemo, "demo", "d", false, "create a standard demo index")
+	indexCmd.Flags().BoolVarP(&isCase, "cases", "c", false, "create a standard Navex case index")
+	indexCmd.Flags().BoolVarP(&isDemo, "demos", "d", false, "create a standard demo index")
+	indexCmd.Flags().BoolVarP(&isPO, "purchaseOrders", "p", false, "create a standard purchase order index")
 
 	indexCmd.Flags().StringVarP(&fromFile, "from", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
 }
