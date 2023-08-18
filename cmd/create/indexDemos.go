@@ -7,8 +7,6 @@ import (
 	"log"
 )
 
-var ()
-
 func indexDemo(c *elasticsearch.Client) error {
 	res, err := c.Indices.Delete([]string{"demos"})
 	if err != nil {
