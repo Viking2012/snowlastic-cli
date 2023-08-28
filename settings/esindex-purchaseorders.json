@@ -1,37 +1,4 @@
-package create
-
-import (
-	"bytes"
-	"fmt"
-	"github.com/elastic/go-elasticsearch/v8"
-	"log"
-)
-
-func indexPurchaseOrder(c *elasticsearch.Client) error {
-	res, err := c.Indices.Delete([]string{"purchaseorders"})
-	if err != nil {
-		return fmt.Errorf("cannot delete index: %s", err)
-	}
-	if res.IsError() {
-		log.Println("warning when deleting index", res.String())
-	} else {
-		log.Println(res.String())
-	}
-
-	b := []byte(purchaseOrderIndex)
-	res, err = c.Indices.Create("purchaseorders", c.Indices.Create.WithBody(bytes.NewReader(b)))
-	if err != nil {
-		return fmt.Errorf("cannot create index: %s", err)
-	}
-
-	if res.IsError() {
-		return fmt.Errorf("cannot create index, got an error response code: %s\n", res.String())
-	}
-	log.Println("successfully created an index")
-	return nil
-}
-
-const purchaseOrderIndex = `{
+{
   "settings": {
     "analysis": {
       "analyzer": {
@@ -46,7 +13,7 @@ const purchaseOrderIndex = `{
           "type": "custom",
           "filter": ["lowercase","asciifolding"]
         }
-      } 
+      }
     }
   },
   "mappings": {
@@ -106,7 +73,7 @@ const purchaseOrderIndex = `{
       "Deletion Indicator in Purchasing Document Item":         {"type": "keyword",	"normalizer": "poNormalizer"},
       "RFQ status":                                             {"type": "keyword",	"normalizer": "poNormalizer"},
       "Purchasing Document Item Change Date":                   {"type": "date"									},
-	  "Short Text for Purchasing Document Item":                {"type": "text"									},
+      "Short Text for Purchasing Document Item":                {"type": "text"									},
       "Material Number":                                        {"type": "keyword",	"normalizer": "poNormalizer"},
       "EKPO_MATNR_Concat":                                      {"type": "keyword",	"normalizer": "poNormalizer"},
       "MPN":                                                    {"type": "keyword",	"normalizer": "poNormalizer"},
@@ -198,14 +165,13 @@ const purchaseOrderIndex = `{
       "Last Receipt Doc Date":                                  {"type": "date"									},
       "Approvals Required":                                     {"type": "float"								},
       "ICM_VENDOR_ID":                                          {"type": "keyword",	"normalizer": "poNormalizer"},
-      "Aproval Descriptive":                                    {"type": "keyword",	"normalizer": "poNormalizer"},
+      "Approval Descriptive":                                    {"type": "keyword",	"normalizer": "poNormalizer"},
       "Total Approvals":                                        {"type": "float"								},
       "Flags":                                                  {"type":  "nested","properties": {
-                                                                  "Flag: NoInvoiceNeeded":          {"type": "boolean"},
-                                                                  "Flag: NoReceiptNeeded":          {"type": "boolean"},
-                                                                  "Flag: NoInvoiceOrReceiptNeeded": {"type": "boolean"}
-                                                                }}
+        "Flag: NoInvoiceNeeded":          {"type": "boolean"},
+        "Flag: NoReceiptNeeded":          {"type": "boolean"},
+        "Flag: NoInvoiceOrReceiptNeeded": {"type": "boolean"}
+      }}
     }
   }
 }
-`
