@@ -43,42 +43,29 @@ var fileCmd = &cobra.Command{
 	Short: "Import a json file into an elasticsearch index",
 	Long:  ``,
 	Args:  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if !viper.IsSet("esClient") {
+			return errors.New("elasticsearch was somehow not created by the `import` command prior to running `demos`")
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			caCertPath string
-			err        error
-			caCert     []byte
-			cfg        es.ElasticClientConfig
-			c          *elasticsearch.Client
-
-			filePath  string = args[0]
 			indexName string = viper.GetString("identifier")
-			As        []Anon
+
+			filePath string = args[0]
+			As       []Anon
+
+			c *elasticsearch.Client
 
 			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 			numErrors  int64
 			numIndexed int64
+
+			err error
 		)
 		// generate the CA Certificate bytes needed for the elasticsearch Config
-		caCertPath = viper.GetString("elasticCaCertPath")
-		caCert, err = os.ReadFile(caCertPath)
-		if err != nil {
-			return err
-		}
-		cfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPassword"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
-		}
-		// Generate the client
-		c, err = es.NewElasticClient(&cfg)
+		c, err = getElasticClient()
 		if err != nil {
 			return err
 		}

@@ -22,7 +22,7 @@ THE SOFTWARE.
 package create
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
@@ -32,45 +32,41 @@ import (
 	"snowlastic-cli/pkg/es"
 )
 
-type run struct {
-	f    func(*elasticsearch.Client) error
-	name string
-}
-
 var (
-	isCase   bool
-	isDemo   bool
-	isPO     bool
-	runAll   bool
-	fromFile string
+	settingsFlag string
 
-	c    *elasticsearch.Client
-	runs []run
+	c *elasticsearch.Client
 )
+
+var defaultEntitySettings = map[string]string{
+	"cases":          "./settings/esindex-cases.json",
+	"purchaseorders": "./settings/esindex-purchaseorders.json",
+	"demos":          "./settings/esindex-demos.json",
+}
 
 // indexCmd represents the index command
 var indexCmd = &cobra.Command{
-	Use:   "index",
+	Use:   "index index-name [--settings ./path/to/settings.json]",
 	Short: "Create an elasticsearch index",
-	Long:  "",
-	PreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Flags().NFlag() == 0 {
-			return errors.New("at least one flag is required by the index command")
-		}
-		if fromFile != "" && len(args) == 0 {
-			return errors.New(`you must provide an index name when creating an anonymous index from a file
-Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index name>
+	Long: `Create an elasticsearch index of the given name, optionally with explicit settings from a json file
+Example: create index demos --settings ./settings/elastic-indices/demos.json
 
-`)
-		}
-		return nil
-	},
+Indices created without the --settings flag will be created with the elasticsearch servers default settings.
+The following ICM Entities have pre-defined settings which will override the server defaults, even without a --settings flag being provided:
+  ICM Entity                          | Index name	   		| Example command
+-----------------------------------------------------------------------------------------
+- Navex cases 							cases				  create index cases
+- Demonstrations and keyword testing 	demos				  create index demos
+- Purchase Orders 						purchaseorders		  create index purchaseorders`,
+	ValidArgs: []string{"cases", "demos", "purchaseorders"},
+	Args:      cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
 			caCertPath string
 			err        error
 			caCert     []byte
-			cfg        es.ElasticClientConfig
+
+			settingsFilepath string
 		)
 		// generate the CA Certificate bytes needed for the elasticsearch Config
 		caCertPath = viper.GetString("elasticCaCertPath")
@@ -78,7 +74,8 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 		if err != nil {
 			return err
 		}
-		cfg = es.ElasticClientConfig{
+		// Generate the client
+		c, err = es.NewElasticClient(&es.ElasticClientConfig{
 			Addresses: []string{fmt.Sprintf(
 				"https://%s:%s",
 				viper.GetString("elasticUrl"),
@@ -89,45 +86,33 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 			ApiKey:       viper.GetString("elasticApiKey"),
 			ServiceToken: viper.GetString("elasticServiceToken"),
 			CaCert:       caCert,
-		}
-		// Generate the client
-		c, err = es.NewElasticClient(&cfg)
+		})
 		if err != nil {
 			return err
 		}
 
-		// parse the given commands
-		if runAll {
-			runs = []run{
-				{f: indexDemo, name: "demos"},
-				{f: indexCase, name: "cases"},
-				{f: indexPurchaseOrder, name: "POs"},
+		settingsFilepath = settingsFlag
+		for i := range cmd.ValidArgs {
+			if args[0] == cmd.ValidArgs[i] {
+				settingsFilepath = defaultEntitySettings[args[0]]
+				break
 			}
 		}
 
-		if isDemo && !runAll {
-			runs = append(runs, run{f: indexDemo, name: "demos"})
-		}
-		if isCase && !runAll {
-			runs = append(runs, run{f: indexCase, name: "cases"})
-		}
-		if isPO && !runAll {
-			runs = append(runs, run{f: indexPurchaseOrder, name: "POs"})
-		}
-		if fromFile != "" && !runAll {
-			fmt.Printf("creating index '%s' from file\n", args[0])
-			err = indexFile(c, fromFile, args[0])
+		var b []byte
+		if settingsFilepath != "" {
+			fmt.Printf("creating index '%s' with settings file located at %s\n", args[0], settingsFilepath)
+			b, err = os.ReadFile(settingsFilepath)
 			if err != nil {
 				return err
 			}
+		} else {
+			fmt.Printf("creating index '%s' with default settings\n", args[0])
 		}
 
-		for _, run := range runs {
-			log.Printf("creating %s index", run.name)
-			err := run.f(c)
-			if err != nil {
-				return err
-			}
+		err = createIndex(c, b, args[0])
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -135,22 +120,28 @@ Usage: snowlastic-cli.exe create index --from ./path/to/settings.json <index nam
 }
 
 func init() {
-	//createCmd.AddCommand(indexCmd)
+	indexCmd.Flags().StringVarP(&settingsFlag, "settings", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
+}
 
-	// Here you will define your flags and configuration settings.
+func createIndex(c *elasticsearch.Client, settings []byte, indexName string) error {
+	res, err := c.Indices.Delete([]string{indexName})
+	if err != nil {
+		return fmt.Errorf("cannot delete index: %s", err)
+	}
+	if res.IsError() {
+		log.Println("error when deleting index", res.String())
+	} else {
+		log.Println(res.String())
+	}
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// indexCmd.PersistentFlags().String("foo", "", "A help for foo")
+	res, err = c.Indices.Create(indexName, c.Indices.Create.WithBody(bytes.NewReader(settings)))
+	if err != nil {
+		return fmt.Errorf("cannot create index: %s", err)
+	}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// indexCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	indexCmd.Flags().BoolVarP(&runAll, "all", "", false, "create all standard indices")
-
-	indexCmd.Flags().BoolVarP(&isCase, "cases", "c", false, "create a standard Navex case index")
-	indexCmd.Flags().BoolVarP(&isDemo, "demos", "d", false, "create a standard demo index")
-	indexCmd.Flags().BoolVarP(&isPO, "purchaseOrders", "p", false, "create a standard purchase order index")
-
-	indexCmd.Flags().StringVarP(&fromFile, "from", "", "", "Create an anonymous index from a json file containing elasticsearch index settings")
+	if res.IsError() {
+		return fmt.Errorf("cannot create index, got an error response code: %s\n", res.String())
+	}
+	log.Printf("successfully created index %s\n", indexName)
+	return nil
 }

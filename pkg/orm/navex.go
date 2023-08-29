@@ -1,6 +1,7 @@
 package types
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/alexander-orban/icm_goapi/orm"
@@ -195,4 +196,54 @@ func (c *Case) Scan(src interface{}) error {
 	default:
 		return errors.New("invalid sql return type for Case")
 	}
+}
+func (c *Case) ScanFrom(rows *sql.Rows) error {
+	return rows.Scan(
+		&c.CaseID,
+		&c.CaseNumber,
+		&c.Alert,
+		&c.CaseBranchNumber,
+		&c.CaseDetails,
+		&c.CaseType,
+		&c.ActionTaken,
+		&c.IncidentDate,
+		&c.ClosureDate,
+		&c.DueDate,
+		&c.OpenDate,
+		&c.ReportDate,
+		&c.CaseCity,
+		&c.CaseStateProvince,
+		&c.CasePostalCode,
+		&c.CaseCountry,
+		&c.CaseRegion,
+		&c.BusinessArea,
+		&c.Division,
+		&c.PrimaryIssue,
+		&c.PrimaryIssueLayer1,
+		&c.PrimaryIssueLayer2,
+		&c.PrimaryIssueLayer3,
+		&c.PrimaryOutcome,
+		&c.SecondaryIssue,
+		&c.SecondaryIssueLayer1,
+		&c.SecondaryIssueLayer2,
+		&c.SecondaryIssueLayer3,
+		&c.SecondaryOutcome,
+		&c.TertiaryIssue,
+		&c.TertiaryIssueLayer1,
+		&c.TertiaryIssueLayer2,
+		&c.TertiaryIssueLayer3,
+		&c.TertiaryOutcome,
+		&c.EmailAddress,
+		&c.ReporterIsEmployee,
+		&c.ReporterNameFirst,
+		&c.ReporterNameLast,
+		&c.CaseStatus,
+		&c.Disposition,
+		&c.GovernmentNexus,
+		&c.Summary,
+		&c.CaseFiles,
+		&c.CaseQuestions,
+		&c.CaseNotes,
+		&c.CaseParticipants,
+	)
 }
