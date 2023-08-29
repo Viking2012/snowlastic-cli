@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"math"
-	"os"
 	es "snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
 	"snowlastic-cli/pkg/snowflake"
@@ -44,23 +43,27 @@ var casesCmd = &cobra.Command{
 	Use:   "cases",
 	Short: "Index all Navex Cases contained in the snowflake database",
 	Long:  ``,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if !viper.IsSet("esClient") {
+			return errors.New("elasticsearch was somehow not created by the `import` command prior to running `demos`")
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			err error
-
-			caCert     []byte
-			caCertPath string
-			esCfg      es.ElasticClientConfig
-			esC        *elasticsearch.Client
-
-			db *sql.DB
-
-			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
-
 			indexName = "cases"
 
+			db   *sql.DB
+			rows *sql.Rows
+			c    *elasticsearch.Client
+
+			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 			numErrors  int64
 			numIndexed int64
+			rowCount   int64
+			numBatches float64
+
+			err error
 		)
 
 		log.Println("connecting to database")
@@ -78,9 +81,8 @@ var casesCmd = &cobra.Command{
 		}
 		defer db.Close()
 
-		var rowCount int64
 		var countQuery = "SELECT COUNT(1) FROM (" + string(caseQuery) + ")"
-		rows, err := db.Query(countQuery)
+		rows, err = db.Query(countQuery)
 		if err != nil {
 			return err
 		}
@@ -89,71 +91,18 @@ var casesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		numBatches := math.Ceil(float64(rowCount) / es.BulkInsertSize)
+		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
 
 		start := time.Now().UTC()
 		go func() {
 			log.Println("reading cases from database")
-			rows, err := db.Query(caseQuery)
+			rows, err = db.Query(caseQuery)
 			if err != nil {
 				log.Fatal(err)
 			}
 			for rows.Next() {
-				//var c = orm.Case{
-				//	CaseFiles:        make([]orm.CaseFile, 0),
-				//	CaseQuestions:    make([]orm.CaseQuestion, 0),
-				//	CaseNotes:        make([]orm.CaseNote, 0),
-				//	CaseParticipants: make([]orm.CaseParticipant, 0),
-				//}
 				var c orm.Case
-				if err := rows.Scan(
-					&c.CaseID,
-					&c.CaseNumber,
-					&c.Alert,
-					&c.CaseBranchNumber,
-					&c.CaseDetails,
-					&c.CaseType,
-					&c.ActionTaken,
-					&c.IncidentDate,
-					&c.ClosureDate,
-					&c.DueDate,
-					&c.OpenDate,
-					&c.ReportDate,
-					&c.CaseCity,
-					&c.CaseStateProvince,
-					&c.CasePostalCode,
-					&c.CaseCountry,
-					&c.CaseRegion,
-					&c.BusinessArea,
-					&c.Division,
-					&c.PrimaryIssue,
-					&c.PrimaryIssueLayer1,
-					&c.PrimaryIssueLayer2,
-					&c.PrimaryIssueLayer3,
-					&c.PrimaryOutcome,
-					&c.SecondaryIssue,
-					&c.SecondaryIssueLayer1,
-					&c.SecondaryIssueLayer2,
-					&c.SecondaryIssueLayer3,
-					&c.SecondaryOutcome,
-					&c.TertiaryIssue,
-					&c.TertiaryIssueLayer1,
-					&c.TertiaryIssueLayer2,
-					&c.TertiaryIssueLayer3,
-					&c.TertiaryOutcome,
-					&c.EmailAddress,
-					&c.ReporterIsEmployee,
-					&c.ReporterNameFirst,
-					&c.ReporterNameLast,
-					&c.CaseStatus,
-					&c.Disposition,
-					&c.GovernmentNexus,
-					&c.Summary,
-					&c.CaseFiles,
-					&c.CaseQuestions,
-					&c.CaseNotes,
-					&c.CaseParticipants,
-				); err != nil {
+				if err := c.ScanFrom(rows); err != nil {
 					log.Fatal(err)
 				}
 				//fmt.Printf("id: %-15s notes: %4d questions: %4d files: %4d participants: %4d\n", c.GetID(), len(c.CaseNotes), len(c.CaseQuestions), len(c.CaseFiles), len(c.CaseParticipants))
@@ -162,34 +111,14 @@ var casesCmd = &cobra.Command{
 			close(docs)
 		}()
 
-		// generate the CA Certificate bytes needed for the elasticsearch Config
-		log.Println("connecting to elasticsearch")
-		caCertPath = viper.GetString("elasticCaCertPath")
-		caCert, err = os.ReadFile(caCertPath)
+		// Get the generated elasticsearch client
+		c, err = getElasticClient()
 		if err != nil {
 			return err
 		}
-		esCfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPassword"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
-		}
-		// Generate the client
-		esC, err = es.NewElasticClient(&esCfg)
-		if err != nil {
-			return err
-		}
-
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
 		log.Println("indexing cases")
-		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName, int64(numBatches))
+		numIndexed, numErrors, err = es.BulkImport(c, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}

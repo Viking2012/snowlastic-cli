@@ -1,6 +1,6 @@
 # Note:
 # Instead of defining any of the below variables, any of the keys below
-# may be created and read from an environment variable. Tbis is especially
+# may be created and read from an environment variable. This is especially
 # useful when storing credentials such as usernames or passwords.
 # i.e. instead of changing the "elasticPassword" setting below, you may
 # create an environment variable with the same name and containing the
