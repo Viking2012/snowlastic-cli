@@ -30,11 +30,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"log"
 	"math"
 	"snowlastic-cli/pkg/es"
-	"snowlastic-cli/pkg/snowflake"
 	"time"
 )
 
@@ -45,7 +43,9 @@ var purchaseOrdersCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			indexName = "purchaseorders"
+			dbQueryFrom string = "PURCHASEORDERS_FLAGGED"
+			indexName          = "purchaseorders"
+			docType            = icm_orm.PurchaseOrder{Flags: &icm_orm.PurchaseOrderFlags{}}
 
 			db  *sql.DB
 			esC *elasticsearch.Client
@@ -58,25 +58,17 @@ var purchaseOrdersCmd = &cobra.Command{
 			err error
 		)
 
-		log.Println("connecting to database")
-		var tmp = icm_orm.PurchaseOrder{Flags: &icm_orm.PurchaseOrderFlags{}}
-		var query = icm_encoding.MarshalToSelect(&tmp, "PURCHASEORDERS_FLAGGED", false)
-		db, err = snowflake.NewDB(snowflake.Config{
-			Account:   viper.GetString("snowflakeAccount"),
-			Warehouse: viper.GetString("snowflakeWarehouse"),
-			Database:  viper.GetString("snowflakeDatabase"),
-			Schema:    "CMP",
-			User:      viper.GetString("snowflakeUser"),
-			Password:  viper.GetString("snowflakePassword"),
-			Role:      viper.GetString("snowflakeRole"),
-		})
+		db, err = generateDB("CMP")
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer db.Close()
 
+		var query = icm_encoding.MarshalToSelect(&docType, dbQueryFrom, false)
 		var rowCount int64
 		var countQuery = "SELECT COUNT(1) FROM (" + string(query) + ")"
+
+		// Get row and batch counts
 		rows, err := db.Query(countQuery)
 		if err != nil {
 			return err
@@ -105,9 +97,8 @@ var purchaseOrdersCmd = &cobra.Command{
 			close(docs)
 		}()
 
-		// generate the CA Certificate bytes needed for the elasticsearch Config
 		log.Println("connecting to elasticsearch")
-		esC, err = getElasticClient()
+		esC, err = getElasticClient(ElassticsearchClientLocator)
 		if err != nil {
 			return err
 		}
@@ -141,14 +132,4 @@ var purchaseOrdersCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// purchaseOrdersCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// purchaseOrdersCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
+func init() {}

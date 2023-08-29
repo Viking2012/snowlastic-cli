@@ -22,13 +22,21 @@ THE SOFTWARE.
 package _import
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log"
 	"os"
 	"snowlastic-cli/pkg/es"
+	"snowlastic-cli/pkg/snowflake"
+)
+
+var (
+	ElassticsearchClientLocator string = "esClient"
+	DatabaseConnectionLocator   string = "db"
 )
 
 // importCmd represents the import command
@@ -40,41 +48,31 @@ for importing data from pre-defined sources (such as snowflake tables/views) or
 from a json file containing a list of documents.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			err        error
-			caCert     []byte
-			caCertPath string
-			cfg        es.ElasticClientConfig
-			c          *elasticsearch.Client
+			c   *elasticsearch.Client
+			err error
 		)
-
-		// generate the CA Certificate bytes needed for the elasticsearch Config
-		caCertPath = viper.GetString("elasticCaCertPath")
-		caCert, err = os.ReadFile(caCertPath)
+		c, err = generateElasticClient()
 		if err != nil {
 			return err
 		}
-		cfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPassword"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
-		}
-		// Generate the client
-		c, err = es.NewElasticClient(&cfg)
-		if err != nil {
-			return err
-		}
-		viper.Set("esClient", c)
+		viper.Set(ElassticsearchClientLocator, c)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("import called")
+	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		if viper.IsSet(DatabaseConnectionLocator) {
+			db, err := getDb(DatabaseConnectionLocator)
+			if err != nil {
+				return err
+			}
+			err = db.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 	},
 }
 
@@ -87,25 +85,128 @@ func init() {
 	importCmd.AddCommand(casesCmd)
 	importCmd.AddCommand(fileCmd)
 	importCmd.AddCommand(purchaseOrdersCmd)
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// importCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// importCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func getElasticClient() (*elasticsearch.Client, error) {
+func generateElasticClient() (*elasticsearch.Client, error) {
+	var (
+		err        error
+		caCert     []byte
+		caCertPath string
+		cfg        es.ElasticClientConfig
+		c          *elasticsearch.Client
+	)
+
+	// generate the CA Certificate bytes needed for the elasticsearch Config
+	caCertPath = viper.GetString("elasticCaCertPath")
+	caCert, err = os.ReadFile(caCertPath)
+	if err != nil {
+		return c, err
+	}
+	cfg = es.ElasticClientConfig{
+		Addresses: []string{fmt.Sprintf(
+			"https://%s:%s",
+			viper.GetString("elasticUrl"),
+			viper.GetString("elasticPort"),
+		)},
+		User:         viper.GetString("elasticUser"),
+		Pass:         viper.GetString("elasticPassword"),
+		ApiKey:       viper.GetString("elasticApiKey"),
+		ServiceToken: viper.GetString("elasticServiceToken"),
+		CaCert:       caCert,
+	}
+	return es.NewElasticClient(&cfg)
+}
+
+func getElasticClient(key string) (*elasticsearch.Client, error) {
 	var (
 		c  *elasticsearch.Client
 		ok bool
 	)
-	c, ok = viper.Get("esClient").(*elasticsearch.Client)
+	c, ok = viper.Get(key).(*elasticsearch.Client)
 	if !ok {
 		return nil, errors.New("was not able to gather an elasticsearch client after being created by the `import` command")
 	}
 	return c, nil
 }
+
+func generateDB(schema string) (*sql.DB, error) {
+	log.Println("connecting to database")
+	return snowflake.NewDB(snowflake.Config{
+		Account:   viper.GetString("snowflakeAccount"),
+		Warehouse: viper.GetString("snowflakeWarehouse"),
+		Database:  viper.GetString("snowflakeDatabase"),
+		Schema:    schema,
+		User:      viper.GetString("snowflakeUser"),
+		Password:  viper.GetString("snowflakePassword"),
+		Role:      viper.GetString("snowflakeRole"),
+	})
+
+}
+
+func getDb(key string) (*sql.DB, error) {
+	db, ok := viper.Get(key).(*sql.DB)
+	if !ok {
+		return nil, errors.New("was not able to gather a database connection after being created by the `import` command")
+	}
+	return db, nil
+}
+
+func getRowCount(db *sql.DB, baseQuery []byte) (int64, error) {
+	var rowCount int64
+
+	countQuery := "SELECT COUNT(1) FROM (" + string(baseQuery) + ")"
+	rows, err := db.Query(countQuery)
+	if err != nil {
+		return rowCount, nil
+	}
+	rows.Next()
+	err = rows.Scan(&rowCount)
+	return rowCount, err
+}
+
+func getSegments(db *sql.DB, baseQuery []byte, segmentation string) ([]interface{}, error) {
+	var segments []interface{}
+	var segmentationQuery = "SELECT DISTINCT " +
+		segmentation +
+		" FROM (" +
+		string(baseQuery) +
+		") ORDER BY " +
+		segmentation
+	rows, err := db.Query(segmentationQuery)
+	if err != nil {
+		return segments, err
+	}
+	for rows.Next() {
+		var segment interface{}
+		err := rows.Scan(&segment)
+		if err != nil {
+			return segments, err
+		}
+		segments = append(segments, segment)
+	}
+	return segments, err
+}
+
+// TODO(ajo): complete the function below once a Document interface has been defined
+//func processSegments(t reflect.Type, db *sql.DB, baseQuery []byte, segment string, segments []interface{}, docs chan<- icm_orm.ICMEntity) error {
+//	var query string
+//	for _, s := range segments {
+//		if s != nil {
+//			query = string(baseQuery) + " WHERE " + segment + " = ?"
+//		} else {
+//			query = string(baseQuery) + " WHERE " + segment + " IS NULL"
+//		}
+//		rows, err := db.Query(query, s)
+//		if err != nil {
+//			close(docs)
+//			return err
+//		}
+//		for rows.Next() {
+//			var newEntity = reflect.New(t.Elem()).Interface().(icm_orm.ICMEntity)
+//
+//		}
+//	}
+//
+//	close(docs)
+//	return nil
+//}
