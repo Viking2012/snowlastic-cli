@@ -33,7 +33,6 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"math"
-	"os"
 	"snowlastic-cli/pkg/es"
 	"snowlastic-cli/pkg/snowflake"
 	"time"
@@ -46,21 +45,17 @@ var purchaseOrdersCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			err error
+			indexName = "purchaseorders"
 
-			caCert     []byte
-			caCertPath string
-			esCfg      es.ElasticClientConfig
-			esC        *elasticsearch.Client
-
-			db *sql.DB
+			db  *sql.DB
+			esC *elasticsearch.Client
 
 			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
 
-			indexName = "purchaseorders"
-
 			numErrors  int64
 			numIndexed int64
+
+			err error
 		)
 
 		log.Println("connecting to database")
@@ -112,25 +107,7 @@ var purchaseOrdersCmd = &cobra.Command{
 
 		// generate the CA Certificate bytes needed for the elasticsearch Config
 		log.Println("connecting to elasticsearch")
-		caCertPath = viper.GetString("elasticCaCertPath")
-		caCert, err = os.ReadFile(caCertPath)
-		if err != nil {
-			return err
-		}
-		esCfg = es.ElasticClientConfig{
-			Addresses: []string{fmt.Sprintf(
-				"https://%s:%s",
-				viper.GetString("elasticUrl"),
-				viper.GetString("elasticPort"),
-			)},
-			User:         viper.GetString("elasticUser"),
-			Pass:         viper.GetString("elasticPassword"),
-			ApiKey:       viper.GetString("elasticApiKey"),
-			ServiceToken: viper.GetString("elasticServiceToken"),
-			CaCert:       caCert,
-		}
-		// Generate the client
-		esC, err = es.NewElasticClient(&esCfg)
+		esC, err = getElasticClient()
 		if err != nil {
 			return err
 		}
