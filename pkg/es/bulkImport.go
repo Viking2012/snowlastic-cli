@@ -5,22 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/schollz/progressbar/v3"
 	"log"
+	orm "snowlastic-cli/pkg/orm"
 )
 
 const BulkInsertSize = 1000
 
-func BatchEntities(docs <-chan icm_orm.ICMEntity, batchSize int) chan []icm_orm.ICMEntity {
-	var batches = make(chan []icm_orm.ICMEntity, 1)
+func BatchEntities(docs <-chan orm.SnowlasticDocument, batchSize int) chan []orm.SnowlasticDocument {
+	var batches = make(chan []orm.SnowlasticDocument, 1)
 
 	go func() {
 		defer close(batches)
 		for keepBatching := true; keepBatching; {
-			var batch []icm_orm.ICMEntity
+			var batch []orm.SnowlasticDocument
 			for {
 				select {
 				case c, ok := <-docs:
@@ -44,7 +44,7 @@ func BatchEntities(docs <-chan icm_orm.ICMEntity, batchSize int) chan []icm_orm.
 	return batches
 }
 
-func BulkImport(es *elasticsearch.Client, batches <-chan []icm_orm.ICMEntity, indexName string, numBatches int64) (numIndexed, numErrors int64, err error) {
+func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, numBatches int64) (numIndexed, numErrors int64, err error) {
 	var numProcessed int64 = 1
 	bar := progressbar.Default(numBatches)
 
