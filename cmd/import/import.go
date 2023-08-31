@@ -25,6 +25,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,6 +33,7 @@ import (
 	"os"
 	"snowlastic-cli/pkg/es"
 	"snowlastic-cli/pkg/snowflake"
+	"time"
 )
 
 var (
@@ -185,4 +187,24 @@ func getSegments(db *sql.DB, baseQuery string, segmenter string) ([]interface{},
 		segments = append(segments, segment)
 	}
 	return segments, err
+}
+
+func reportImport(dur time.Duration, numIndexed, numErrors int64) error {
+	if numErrors > 0 {
+		return errors.New(fmt.Sprintf(
+			"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
+			humanize.Comma(int64(numIndexed)),
+			humanize.Comma(int64(numErrors)),
+			dur.Truncate(time.Millisecond),
+			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+		))
+	} else {
+		log.Printf(
+			"Sucessfully indexed [%s] documents in %s (%s docs/sec)",
+			humanize.Comma(int64(numIndexed)),
+			dur.Truncate(time.Millisecond),
+			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+		)
+	}
+	return nil
 }

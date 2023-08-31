@@ -24,8 +24,6 @@ package _import
 import (
 	"database/sql"
 	"errors"
-	"fmt"
-	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,10 +52,10 @@ var casesCmd = &cobra.Command{
 			indexName = "cases"
 			docType   = orm.PurchaseOrder{}
 
-			db *sql.DB
-			c  *elasticsearch.Client
-
-			docs = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
+			db    *sql.DB
+			query = docType.GetQuery(dbSchema, dbTable)
+			c     *elasticsearch.Client
+			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 
 			err error
 		)
@@ -68,7 +66,6 @@ var casesCmd = &cobra.Command{
 		}
 		defer db.Close()
 
-		var query = docType.GetQuery(dbSchema, dbTable)
 		var rowCount int64
 		var numBatches float64
 		rowCount, err = getRowCount(db, query)
@@ -79,7 +76,7 @@ var casesCmd = &cobra.Command{
 
 		start := time.Now().UTC()
 		go func() {
-			log.Println("reading cases from database")
+			log.Printf("reading %s from database\n", indexName)
 			rows, err := db.Query(query)
 			if err != nil {
 				log.Fatal(err)
@@ -100,41 +97,14 @@ var casesCmd = &cobra.Command{
 			return err
 		}
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Println("indexing cases")
+		log.Printf("indexing %s\n", indexName)
 		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}
 
-		dur := time.Since(start)
-		if numErrors > 0 {
-			return errors.New(fmt.Sprintf(
-				"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				humanize.Comma(int64(numErrors)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			))
-		} else {
-			log.Printf(
-				"Sucessfuly indexed [%s] documents in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			)
-		}
-		return nil
+		return reportImport(time.Since(start), numIndexed, numErrors)
 	},
 }
 
-func init() {
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// import/casesCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// import/casesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
+func init() {}
