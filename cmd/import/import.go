@@ -85,6 +85,7 @@ func Add() *cobra.Command {
 func init() {
 	importCmd.AddCommand(demoCmd)
 	importCmd.AddCommand(casesCmd)
+	importCmd.AddCommand(casesSegmentedCmd)
 	importCmd.AddCommand(fileCmd)
 	importCmd.AddCommand(purchaseOrdersCmd)
 }
