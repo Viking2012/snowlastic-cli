@@ -23,16 +23,12 @@ package _import
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
-	icm_encoding "github.com/alexander-orban/icm_goapi/encoding"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
-	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"log"
 	"math"
 	"snowlastic-cli/pkg/es"
+	orm "snowlastic-cli/pkg/orm"
 	"time"
 )
 
@@ -43,92 +39,63 @@ var purchaseOrdersCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			dbQueryFrom string = "PURCHASEORDERS_FLAGGED"
-			indexName          = "purchaseorders"
-			docType            = icm_orm.PurchaseOrder{Flags: &icm_orm.PurchaseOrderFlags{}}
+			dbSchema  = "CMP"
+			dbTable   = "PURCHASEORDERS_FLAGGED"
+			indexName = "purchaseorders"
+			docType   = orm.PurchaseOrder{}
 
-			db  *sql.DB
-			esC *elasticsearch.Client
-
-			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
-
-			numErrors  int64
-			numIndexed int64
+			db    *sql.DB
+			query = docType.GetQuery(dbSchema, dbTable)
+			c     *elasticsearch.Client
+			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 
 			err error
 		)
 
-		db, err = generateDB("CMP")
+		db, err = generateDB(dbSchema)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer db.Close()
 
-		var query = icm_encoding.MarshalToSelect(&docType, dbQueryFrom, false)
 		var rowCount int64
-		var countQuery = "SELECT COUNT(1) FROM (" + string(query) + ")"
-
-		// Get row and batch counts
-		rows, err := db.Query(countQuery)
+		var numBatches float64
+		rowCount, err = getRowCount(db, query)
 		if err != nil {
 			return err
 		}
-		rows.Next()
-		err = rows.Scan(&rowCount)
-		if err != nil {
-			return err
-		}
-		numBatches := math.Ceil(float64(rowCount) / es.BulkInsertSize)
+		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
 
 		start := time.Now().UTC()
 		go func() {
-			log.Println("reading POs from database")
-			rows, err := db.Query(string(query))
+			log.Printf("reading %s from database\n", indexName)
+			rows, err := db.Query(query)
 			if err != nil {
 				log.Fatal(err)
 			}
 			for rows.Next() {
-				var e icm_orm.ICMEntity
-				if e, err = icm_orm.PurchaseOrderFromRow(rows); err != nil {
+				var c orm.Case
+				if err := c.ScanFrom(rows); err != nil {
 					log.Fatal(err)
 				}
-				docs <- e
+				docs <- &c
 			}
 			close(docs)
 		}()
 
-		log.Println("connecting to elasticsearch")
-		esC, err = getElasticClient(ElassticsearchClientLocator)
+		// Get the generated elasticsearch client
+		c, err = getElasticClient(ElasticsearchClientLocator)
 		if err != nil {
 			return err
 		}
-
-		log.Println("batching cases")
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Println("indexing cases")
-		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName, int64(numBatches))
+		log.Printf("indexing %s\n", indexName)
+		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}
 
-		dur := time.Since(start)
-		if numErrors > 0 {
-			return errors.New(fmt.Sprintf(
-				"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				humanize.Comma(int64(numErrors)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			))
-		} else {
-			log.Printf(
-				"Successfully indexed [%s] documents in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			)
-		}
-		return nil
+		return reportImport(time.Since(start), numIndexed, numErrors)
 	},
 }
 
