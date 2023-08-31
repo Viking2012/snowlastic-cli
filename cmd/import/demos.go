@@ -22,16 +22,17 @@ THE SOFTWARE.
 package _import
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/viper"
 	"log"
 	"math"
 	"snowlastic-cli/pkg/es"
+	orm "snowlastic-cli/pkg/orm"
 	"strconv"
 	"time"
 
@@ -58,14 +59,14 @@ var demoCmd = &cobra.Command{
 
 			c *elasticsearch.Client
 
-			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
+			docs       = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 			numErrors  int64
 			numIndexed int64
 
 			err error
 		)
 
-		c, err = getElasticClient()
+		c, err = getElasticClient(ElasticsearchClientLocator)
 		if err != nil {
 			return err
 		}
@@ -86,7 +87,7 @@ var demoCmd = &cobra.Command{
 			// the pointer will always point to the last document in the list.
 			// Instead we point directly to the entry in the slice of demos we've created above
 			for i := range demos {
-				docs <- icm_orm.ICMEntity(&demos[i])
+				docs <- &demos[i]
 			}
 			close(docs)
 		}()
@@ -138,8 +139,12 @@ type Demo struct {
 	ShouldMatch bool   `json:"should-match"`
 }
 
-func (d *Demo) IsICMEntity() bool { return true }
-func (d *Demo) GetID() string     { return strconv.Itoa(d.ID) }
+func (d *Demo) IsICMEntity() bool              { return true }
+func (d *Demo) IsDocument()                    {}
+func (d *Demo) GetID() string                  { return strconv.Itoa(d.ID) }
+func (d *Demo) GetQuery(string, string) string { return "" }
+func (d *Demo) ScanFrom(rows *sql.Rows) error  { return nil }
+func (d *Demo) New() orm.SnowlasticDocument    { return new(Demo) }
 
 const _demos string = `[
   {

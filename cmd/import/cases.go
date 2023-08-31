@@ -25,7 +25,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
@@ -57,7 +56,7 @@ var casesCmd = &cobra.Command{
 			rows *sql.Rows
 			c    *elasticsearch.Client
 
-			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
+			docs       = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 			numErrors  int64
 			numIndexed int64
 			rowCount   int64
@@ -106,13 +105,13 @@ var casesCmd = &cobra.Command{
 					log.Fatal(err)
 				}
 				//fmt.Printf("id: %-15s notes: %4d questions: %4d files: %4d participants: %4d\n", c.GetID(), len(c.CaseNotes), len(c.CaseQuestions), len(c.CaseFiles), len(c.CaseParticipants))
-				docs <- icm_orm.ICMEntity(&c)
+				docs <- &c
 			}
 			close(docs)
 		}()
 
 		// Get the generated elasticsearch client
-		c, err = getElasticClient()
+		c, err = getElasticClient(ElasticsearchClientLocator)
 		if err != nil {
 			return err
 		}

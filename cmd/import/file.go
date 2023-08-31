@@ -22,10 +22,10 @@ THE SOFTWARE.
 package _import
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
 	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
@@ -34,6 +34,7 @@ import (
 	"math"
 	"os"
 	"snowlastic-cli/pkg/es"
+	orm "snowlastic-cli/pkg/orm"
 	"time"
 )
 
@@ -58,14 +59,14 @@ var fileCmd = &cobra.Command{
 
 			c *elasticsearch.Client
 
-			docs       = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
+			docs       = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 			numErrors  int64
 			numIndexed int64
 
 			err error
 		)
 		// generate the CA Certificate bytes needed for the elasticsearch Config
-		c, err = getElasticClient()
+		c, err = getElasticClient(ElasticsearchClientLocator)
 		if err != nil {
 			return err
 		}
@@ -84,7 +85,7 @@ var fileCmd = &cobra.Command{
 		start := time.Now().UTC()
 		go func() {
 			for i := range As {
-				docs <- icm_orm.ICMEntity(&As[i])
+				docs <- &As[i]
 			}
 			close(docs)
 		}()
@@ -140,7 +141,7 @@ type Anon struct {
 	m
 }
 
-func (a *Anon) IsICMEntity() bool { return true }
+func (a *Anon) IsDocument() {}
 func (a *Anon) GetID() string {
 	var (
 		idField string
@@ -163,3 +164,6 @@ func (a *Anon) UnmarshalJSON(data []byte) error {
 	a.m = m
 	return nil
 }
+func (a *Anon) GetQuery(string, string) string { return "" }
+func (a *Anon) ScanFrom(rows *sql.Rows) error  { return nil }
+func (a *Anon) New() orm.SnowlasticDocument    { return new(Anon) }
