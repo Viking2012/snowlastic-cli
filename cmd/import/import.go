@@ -35,8 +35,8 @@ import (
 )
 
 var (
-	ElassticsearchClientLocator string = "esClient"
-	DatabaseConnectionLocator   string = "db"
+	ElasticsearchClientLocator string = "esClient"
+	DatabaseConnectionLocator  string = "db"
 )
 
 // importCmd represents the import command
@@ -55,7 +55,7 @@ from a json file containing a list of documents.`,
 		if err != nil {
 			return err
 		}
-		viper.Set(ElassticsearchClientLocator, c)
+		viper.Set(ElasticsearchClientLocator, c)
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -71,8 +71,8 @@ from a json file containing a list of documents.`,
 			if err != nil {
 				return err
 			}
-			return nil
 		}
+		return nil
 	},
 }
 
@@ -151,10 +151,10 @@ func getDb(key string) (*sql.DB, error) {
 	return db, nil
 }
 
-func getRowCount(db *sql.DB, baseQuery []byte) (int64, error) {
+func getRowCount(db *sql.DB, baseQuery string) (int64, error) {
 	var rowCount int64
 
-	countQuery := "SELECT COUNT(1) FROM (" + string(baseQuery) + ")"
+	countQuery := "SELECT COUNT(1) FROM (" + baseQuery + ")"
 	rows, err := db.Query(countQuery)
 	if err != nil {
 		return rowCount, nil
@@ -164,14 +164,14 @@ func getRowCount(db *sql.DB, baseQuery []byte) (int64, error) {
 	return rowCount, err
 }
 
-func getSegments(db *sql.DB, baseQuery []byte, segmentation string) ([]interface{}, error) {
+func getSegments(db *sql.DB, baseQuery string, segmenter string) ([]interface{}, error) {
 	var segments []interface{}
 	var segmentationQuery = "SELECT DISTINCT " +
-		segmentation +
+		segmenter +
 		" FROM (" +
-		string(baseQuery) +
+		baseQuery +
 		") ORDER BY " +
-		segmentation
+		segmenter
 	rows, err := db.Query(segmentationQuery)
 	if err != nil {
 		return segments, err
@@ -186,27 +186,3 @@ func getSegments(db *sql.DB, baseQuery []byte, segmentation string) ([]interface
 	}
 	return segments, err
 }
-
-// TODO(ajo): complete the function below once a Document interface has been defined
-//func processSegments(t reflect.Type, db *sql.DB, baseQuery []byte, segment string, segments []interface{}, docs chan<- icm_orm.ICMEntity) error {
-//	var query string
-//	for _, s := range segments {
-//		if s != nil {
-//			query = string(baseQuery) + " WHERE " + segment + " = ?"
-//		} else {
-//			query = string(baseQuery) + " WHERE " + segment + " IS NULL"
-//		}
-//		rows, err := db.Query(query, s)
-//		if err != nil {
-//			close(docs)
-//			return err
-//		}
-//		for rows.Next() {
-//			var newEntity = reflect.New(t.Elem()).Interface().(icm_orm.ICMEntity)
-//
-//		}
-//	}
-//
-//	close(docs)
-//	return nil
-//}
