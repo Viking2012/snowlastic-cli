@@ -24,15 +24,18 @@ package _import
 import (
 	"database/sql"
 	"errors"
-	"github.com/elastic/go-elasticsearch/v8"
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
 	es "snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
 	"time"
 )
+
+var segmenter string
 
 // import/casesCmd represents the import/cases command
 var casesSegmentedCmd = &cobra.Command{
@@ -45,66 +48,112 @@ var casesSegmentedCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var (
-			dbSchema  = "SQL_NAVEX"
-			dbTable   = "" // there are multiple, which are handled in the GetQuery return
-			indexName = "cases"
-			docType   = orm.PurchaseOrder{}
-
-			db    *sql.DB
-			query = docType.GetQuery(dbSchema, dbTable)
-			c     *elasticsearch.Client
-			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
-
-			err error
-		)
-
-		db, err = generateDB(dbSchema)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer db.Close()
-
-		var rowCount int64
-		var numBatches float64
-		rowCount, err = getRowCount(db, query)
-		if err != nil {
-			return err
-		}
-		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
-
-		start := time.Now().UTC()
-		go func() {
-			log.Printf("reading %s from database\n", indexName)
-			rows, err := db.Query(query)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for rows.Next() {
-				var c orm.Case
-				if err := c.ScanFrom(rows); err != nil {
-					log.Fatal(err)
-				}
-				docs <- &c
-			}
-			close(docs)
-		}()
-
-		// Get the generated elasticsearch client
-		c, err = getElasticClient(ElasticsearchClientLocator)
-		if err != nil {
-			return err
-		}
-		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Printf("indexing %s\n", indexName)
-		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
-		if err != nil {
-			return err
-		}
-
-		return reportImport(time.Since(start), numIndexed, numErrors)
-	},
+	RunE: runImport,
 }
 
-func init() {}
+func init() {
+	casesSegmentedCmd.Flags().StringVar(&segmenter, "by", "", "a field or SQL aggregating function used to split the import")
+}
+
+func runImport(cmd *cobra.Command, args []string) error {
+	var (
+		dbSchema  = "SQL_NAVEX"
+		dbTable   = "" // there are multiple, which are handled in the GetQuery return
+		indexName = "test"
+		docType   = (&orm.Case{}).New()
+
+		db    *sql.DB
+		query = docType.GetQuery(dbSchema, dbTable)
+
+		err error
+	)
+
+	db, err = generateDB(dbSchema)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var segments []interface{}
+	if segmenter != "" {
+		segments, err = getSegments(db, query, segmenter)
+	} else {
+		segments = []interface{}{"*"}
+		err = nil
+	}
+	log.Printf("processing %d segments into %s\n", len(segments), indexName)
+	if err != nil {
+		return err
+	}
+
+	g := errgroup.Group{}
+
+	for _, seg := range segments {
+		var segment interface{}
+		segment = seg
+		g.Go(func() error {
+			fmt.Println("getting cases from", segment)
+
+			var thisQuery string
+			switch segment {
+			case "*", "%", "all":
+				thisQuery = query
+			case nil:
+				thisQuery = query + " WHERE " + segmenter + " IS NULL"
+			default:
+				thisQuery = query + " WHERE " + segmenter + "= " + quoteParam(segment)
+			}
+
+			var rowCount int64
+			var numBatches float64
+			rowCount, err = getRowCount(db, thisQuery)
+			if err != nil {
+				return err
+			}
+			numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
+
+			start := time.Now().UTC()
+			var cases = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
+			g.Go(func() error {
+				defer close(cases)
+				rows, err := db.Query(thisQuery)
+				if err != nil {
+					return fmt.Errorf("problem with stmt.Query(%s): %s", segment, err)
+				}
+
+				for rows.Next() {
+					var c orm.Case
+					if err := c.ScanFrom(rows); err != nil {
+						return fmt.Errorf("problem with scanning case %s: %s", c.CaseID, err)
+					}
+					cases <- &c
+				}
+				return nil
+			})
+			c, err := getElasticClient(ElasticsearchClientLocator)
+			if err != nil {
+				return fmt.Errorf("problem with getting elasticsearch clinet for segment %s: %s", segment, err)
+			}
+			batches := es.BatchEntities(cases, es.BulkInsertSize)
+			numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
+			if err != nil {
+				return fmt.Errorf("problem with bulk importing for segment %s: %s", segment, err)
+			}
+
+			return reportImport(fmt.Sprintf("%s: %s=%v", indexName, segmenter, segment), time.Since(start), numIndexed, numErrors)
+		})
+	}
+	return g.Wait()
+}
+
+func quoteParam(i interface{}) string {
+	switch i.(type) {
+	case string:
+		return fmt.Sprintf("'%s'", i)
+	case int, int8, int16, int32, int64:
+		return fmt.Sprintf("%d", i)
+	case float32, float64:
+		return fmt.Sprintf("%f", i)
+	}
+	return ""
+}
