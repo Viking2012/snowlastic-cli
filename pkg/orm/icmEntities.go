@@ -176,7 +176,9 @@ func (po *PurchaseOrder) ScanFrom(rows *sql.Rows) error {
 		po.PurchaseOrder.Flags,
 	)
 }
-func (po *PurchaseOrder) New() SnowlasticDocument { return nil }
+func (po *PurchaseOrder) New() SnowlasticDocument {
+	return &PurchaseOrder{icmOrm.PurchaseOrder{Flags: &icmOrm.PurchaseOrderFlags{}}}
+}
 
 //type _ struct {
 //	icmOrm._
