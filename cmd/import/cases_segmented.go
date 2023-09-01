@@ -81,7 +81,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	var segments []interface{}
 	if segmenter != "" {
-		segments, err = getSegments(db, query, segmenter)
+		segments, err = getSegments(db, query, quoteField(segmenter))
 	} else {
 		segments = []interface{}{"*"}
 		err = nil
@@ -104,9 +104,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 			case "*", "%", "all":
 				thisQuery = query
 			case nil:
-				thisQuery = query + " WHERE " + segmenter + " IS NULL"
+				thisQuery = query + " WHERE " + quoteField(segmenter) + " IS NULL"
 			default:
-				thisQuery = query + " WHERE " + segmenter + "= " + quoteParam(segment)
+				thisQuery = query + " WHERE " + quoteField(segmenter) + "= " + quoteParam(segment)
 			}
 
 			var rowCount int64
