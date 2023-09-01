@@ -29,16 +29,25 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
+	"golang.org/x/sync/errgroup"
 	"log"
+	"math"
 	"os"
+	"regexp"
 	"snowlastic-cli/pkg/es"
+	orm "snowlastic-cli/pkg/orm"
 	"snowlastic-cli/pkg/snowflake"
+	"sync"
 	"time"
+	"unicode"
 )
 
 var (
 	ElasticsearchClientLocator string = "esClient"
-	DatabaseConnectionLocator  string = "db"
+
+	segmenter string
 )
 
 // importCmd represents the import command
@@ -63,19 +72,6 @@ from a json file containing a list of documents.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("import called")
 	},
-	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		if viper.IsSet(DatabaseConnectionLocator) {
-			db, err := getDb(DatabaseConnectionLocator)
-			if err != nil {
-				return err
-			}
-			err = db.Close()
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	},
 }
 
 func Add() *cobra.Command {
@@ -88,8 +84,12 @@ func init() {
 	importCmd.AddCommand(casesSegmentedCmd)
 	importCmd.AddCommand(fileCmd)
 	importCmd.AddCommand(purchaseOrdersCmd)
+	importCmd.AddCommand(purchaseOrdersSegmentedCmd)
+
+	importCmd.PersistentFlags().StringVar(&segmenter, "by", "", "a field or SQL aggregating function used to split the import")
 }
 
+// Elasticsearch utilities
 func generateElasticClient() (*elasticsearch.Client, error) {
 	var (
 		err        error
@@ -119,7 +119,6 @@ func generateElasticClient() (*elasticsearch.Client, error) {
 	}
 	return es.NewElasticClient(&cfg)
 }
-
 func getElasticClient(key string) (*elasticsearch.Client, error) {
 	var (
 		c  *elasticsearch.Client
@@ -131,7 +130,29 @@ func getElasticClient(key string) (*elasticsearch.Client, error) {
 	}
 	return c, nil
 }
+func reportImport(prefix string, dur time.Duration, numIndexed, numErrors int64) error {
+	if numErrors > 0 {
+		return errors.New(fmt.Sprintf(
+			"%s:\tIndexed [%s] documents with [%s] errors in %s (%s docs/sec)",
+			prefix,
+			humanize.Comma(int64(numIndexed)),
+			humanize.Comma(int64(numErrors)),
+			dur.Truncate(time.Millisecond),
+			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+		))
+	} else {
+		log.Printf(
+			"%s:\tSucessfully indexed [%s] documents in %s (%s docs/sec)",
+			prefix,
+			humanize.Comma(int64(numIndexed)),
+			dur.Truncate(time.Millisecond),
+			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
+		)
+	}
+	return nil
+}
 
+// Database utilities
 func generateDB(schema string) (*sql.DB, error) {
 	log.Println("connecting to database")
 	return snowflake.NewDB(snowflake.Config{
@@ -145,15 +166,6 @@ func generateDB(schema string) (*sql.DB, error) {
 	})
 
 }
-
-func getDb(key string) (*sql.DB, error) {
-	db, ok := viper.Get(key).(*sql.DB)
-	if !ok {
-		return nil, errors.New("was not able to gather a database connection after being created by the `import` command")
-	}
-	return db, nil
-}
-
 func getRowCount(db *sql.DB, baseQuery string) (int64, error) {
 	var rowCount int64
 
@@ -166,7 +178,6 @@ func getRowCount(db *sql.DB, baseQuery string) (int64, error) {
 	err = rows.Scan(&rowCount)
 	return rowCount, err
 }
-
 func getSegments(db *sql.DB, baseQuery string, segmenter string) ([]interface{}, error) {
 	var segments []interface{}
 	var segmentationQuery = "SELECT DISTINCT " +
@@ -190,24 +201,61 @@ func getSegments(db *sql.DB, baseQuery string, segmenter string) ([]interface{},
 	return segments, err
 }
 
-func reportImport(prefix string, dur time.Duration, numIndexed, numErrors int64) error {
-	if numErrors > 0 {
-		return errors.New(fmt.Sprintf(
-			"%s:\tIndexed [%s] documents with [%s] errors in %s (%s docs/sec)",
-			prefix,
-			humanize.Comma(int64(numIndexed)),
-			humanize.Comma(int64(numErrors)),
-			dur.Truncate(time.Millisecond),
-			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-		))
-	} else {
-		log.Printf(
-			"%s:\tSucessfully indexed [%s] documents in %s (%s docs/sec)",
-			prefix,
-			humanize.Comma(int64(numIndexed)),
-			dur.Truncate(time.Millisecond),
-			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-		)
+// importation utilities
+func quoteParam(i interface{}) string {
+	switch i.(type) {
+	case string:
+		return fmt.Sprintf("'%s'", i)
+	case int, int8, int16, int32, int64:
+		return fmt.Sprintf("%d", i)
+	case float32, float64:
+		return fmt.Sprintf("%f", i)
 	}
-	return nil
+	return ""
+}
+func quoteField(i interface{}) string {
+	switch i.(type) {
+	case string:
+		nedsQuotes, _ := needsQuoting(i.(string))
+		if nedsQuotes {
+			return fmt.Sprintf(`"%s"`, i)
+		}
+		return fmt.Sprintf("%s", i)
+	case int, int8, int16, int32, int64:
+		return fmt.Sprintf("%d", i)
+	case float32, float64:
+		return fmt.Sprintf("%f", i)
+	}
+	return ""
+}
+func needsQuoting(field string) (bool, error) {
+	matched, err := regexp.Match(`^[A-Za-z_].*`, []byte(field))
+	if err != nil {
+		return true, err
+	}
+	if !matched {
+		return true, nil
+	}
+
+	matched, err = regexp.Match(".*[^A-Za-z0-9_].*", []byte(field))
+	if err != nil {
+		return true, err
+	}
+	if matched {
+		return true, nil
+	}
+
+	if !isUpper(field) {
+		return true, nil
+	}
+
+	return false, nil
+}
+func isUpper(s string) bool {
+	for _, r := range s {
+		if !unicode.IsUpper(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
 }
