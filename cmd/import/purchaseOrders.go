@@ -23,18 +23,12 @@ package _import
 
 import (
 	"database/sql"
-	"errors"
-	"fmt"
-	icm_encoding "github.com/alexander-orban/icm_goapi/encoding"
-	icm_orm "github.com/alexander-orban/icm_goapi/orm"
-	"github.com/dustin/go-humanize"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"log"
 	"math"
 	"snowlastic-cli/pkg/es"
-	"snowlastic-cli/pkg/snowflake"
+	orm "snowlastic-cli/pkg/orm"
 	"time"
 )
 
@@ -45,110 +39,64 @@ var purchaseOrdersCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
+			dbSchema  = "CMP"
+			dbTable   = "PURCHASEORDERS_FLAGGED"
 			indexName = "purchaseorders"
+			docType   = orm.PurchaseOrder{}
 
-			db  *sql.DB
-			esC *elasticsearch.Client
-
-			docs = make(chan icm_orm.ICMEntity, es.BulkInsertSize)
-
-			numErrors  int64
-			numIndexed int64
+			db    *sql.DB
+			query = docType.GetQuery(dbSchema, dbTable)
+			c     *elasticsearch.Client
+			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
 
 			err error
 		)
 
-		log.Println("connecting to database")
-		var tmp = icm_orm.PurchaseOrder{Flags: &icm_orm.PurchaseOrderFlags{}}
-		var query = icm_encoding.MarshalToSelect(&tmp, "PURCHASEORDERS_FLAGGED", false)
-		db, err = snowflake.NewDB(snowflake.Config{
-			Account:   viper.GetString("snowflakeAccount"),
-			Warehouse: viper.GetString("snowflakeWarehouse"),
-			Database:  viper.GetString("snowflakeDatabase"),
-			Schema:    "CMP",
-			User:      viper.GetString("snowflakeUser"),
-			Password:  viper.GetString("snowflakePassword"),
-			Role:      viper.GetString("snowflakeRole"),
-		})
+		db, err = generateDB(dbSchema)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer db.Close()
 
 		var rowCount int64
-		var countQuery = "SELECT COUNT(1) FROM (" + string(query) + ")"
-		rows, err := db.Query(countQuery)
+		var numBatches float64
+		rowCount, err = getRowCount(db, query)
 		if err != nil {
 			return err
 		}
-		rows.Next()
-		err = rows.Scan(&rowCount)
-		if err != nil {
-			return err
-		}
-		numBatches := math.Ceil(float64(rowCount) / es.BulkInsertSize)
+		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
 
 		start := time.Now().UTC()
 		go func() {
-			log.Println("reading POs from database")
-			rows, err := db.Query(string(query))
+			log.Printf("reading %s from database\n", indexName)
+			rows, err := db.Query(query)
 			if err != nil {
 				log.Fatal(err)
 			}
 			for rows.Next() {
-				var e icm_orm.ICMEntity
-				if e, err = icm_orm.PurchaseOrderFromRow(rows); err != nil {
+				var c orm.Case
+				if err := c.ScanFrom(rows); err != nil {
 					log.Fatal(err)
 				}
-				docs <- e
+				docs <- &c
 			}
 			close(docs)
 		}()
 
-		// generate the CA Certificate bytes needed for the elasticsearch Config
-		log.Println("connecting to elasticsearch")
-		esC, err = getElasticClient()
+		// Get the generated elasticsearch client
+		c, err = getElasticClient(ElasticsearchClientLocator)
 		if err != nil {
 			return err
 		}
-
-		log.Println("batching cases")
 		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Println("indexing cases")
-		numIndexed, numErrors, err = es.BulkImport(esC, batches, indexName, int64(numBatches))
+		log.Printf("indexing %s\n", indexName)
+		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
 		if err != nil {
 			return err
 		}
 
-		dur := time.Since(start)
-		if numErrors > 0 {
-			return errors.New(fmt.Sprintf(
-				"Indexed [%s] documents with [%s] errors in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				humanize.Comma(int64(numErrors)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			))
-		} else {
-			log.Printf(
-				"Successfully indexed [%s] documents in %s (%s docs/sec)",
-				humanize.Comma(int64(numIndexed)),
-				dur.Truncate(time.Millisecond),
-				humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
-			)
-		}
-		return nil
+		return reportImport(indexName, time.Since(start), numIndexed, numErrors)
 	},
 }
 
-func init() {
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// purchaseOrdersCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// purchaseOrdersCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
+func init() {}

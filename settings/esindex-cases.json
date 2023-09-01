@@ -51,6 +51,7 @@
       },
       "case_comments": {
         "type": "nested",
+        "include_in_root": true,
         "properties": {
           "followup_question_id": {
             "type": "keyword"
@@ -84,6 +85,7 @@
       },
       "case_files": {
         "type": "nested",
+        "include_in_root": true,
         "properties": {
           "file_id": {
             "type": "keyword"
@@ -99,6 +101,7 @@
       },
       "case_participants": {
         "type": "nested",
+        "include_in_root": true,
         "properties": {
           "participant_id": {
             "type": "keyword"
@@ -129,6 +132,7 @@
       },
       "case_questions": {
         "type": "nested",
+        "include_in_root": true,
         "properties": {
           "followup_question_id": {
             "type": "keyword"
