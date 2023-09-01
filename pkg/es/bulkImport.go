@@ -82,8 +82,6 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocumen
 }
 
 func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, bar *mpb.Bar) (numIndexed, numErrors int64, err error) {
-	var numProcessed int64 = 1
-
 	for batch := range batches {
 		var buf bytes.Buffer // to collect the bytes of the batch payload
 		var start = time.Now()
@@ -109,7 +107,6 @@ func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.Snowlastic
 		}
 		numIndexed += int64(indexCount)
 		numErrors += int64(errorCount)
-		numProcessed++
 		bar.EwmaIncrement(time.Since(start))
 	}
 
