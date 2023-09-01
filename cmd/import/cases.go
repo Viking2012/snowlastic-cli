@@ -103,7 +103,7 @@ var casesCmd = &cobra.Command{
 			return err
 		}
 
-		return reportImport(time.Since(start), numIndexed, numErrors)
+		return reportImport(indexName, time.Since(start), numIndexed, numErrors)
 	},
 }
 
