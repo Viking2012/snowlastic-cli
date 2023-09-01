@@ -33,14 +33,11 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
-	"regexp"
 	es "snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
 	"sync"
 	"time"
 )
-
-var segmenter string
 
 // import/casesCmd represents the import/cases command
 var casesSegmentedCmd = &cobra.Command{
@@ -53,18 +50,16 @@ var casesSegmentedCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE: runImport,
+	RunE: runCasesSegmentedImport,
 }
 
-func init() {
-	casesSegmentedCmd.Flags().StringVar(&segmenter, "by", "", "a field or SQL aggregating function used to split the import")
-}
+func init() {}
 
-func runImport(cmd *cobra.Command, args []string) error {
+func runCasesSegmentedImport(cmd *cobra.Command, args []string) error {
 	var (
 		dbSchema  = "SQL_NAVEX"
 		dbTable   = "" // there are multiple, which are handled in the GetQuery return
-		indexName = "test"
+		indexName = "cases"
 		docType   = (&orm.Case{}).New()
 
 		db    *sql.DB
@@ -92,6 +87,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 
 	g := errgroup.Group{}
+	g.SetLimit(5)
 	var wg sync.WaitGroup
 	p := mpb.New(mpb.WithWaitGroup(&wg))
 
@@ -135,7 +131,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 			start := time.Now().UTC()
 			var cases = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
-			g.Go(func() error {
+			h := errgroup.Group{}
+			h.SetLimit(1)
+			h.Go(func() error {
 				defer close(cases)
 				rows, err := db.Query(thisQuery)
 				if err != nil {
@@ -171,35 +169,8 @@ func runImport(cmd *cobra.Command, args []string) error {
 				))
 			}
 
-			return nil
+			return h.Wait()
 		})
 	}
 	return g.Wait()
-}
-
-func quoteParam(i interface{}) string {
-	switch i.(type) {
-	case string:
-		return fmt.Sprintf("'%s'", i)
-	case int, int8, int16, int32, int64:
-		return fmt.Sprintf("%d", i)
-	case float32, float64:
-		return fmt.Sprintf("%f", i)
-	}
-	return ""
-}
-func quoteField(i interface{}) string {
-	switch i.(type) {
-	case string:
-		whitespace := regexp.MustCompile(`\s`).MatchString(i.(string))
-		if whitespace {
-			return fmt.Sprintf(`"%s"`, i)
-		}
-		return fmt.Sprintf("%s", i)
-	case int, int8, int16, int32, int64:
-		return fmt.Sprintf("%d", i)
-	case float32, float64:
-		return fmt.Sprintf("%f", i)
-	}
-	return ""
 }
