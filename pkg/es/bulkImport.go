@@ -8,8 +8,10 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/schollz/progressbar/v3"
+	"github.com/vbauerster/mpb/v8"
 	"log"
 	orm "snowlastic-cli/pkg/orm"
+	"time"
 )
 
 const BulkInsertSize = 1000
@@ -49,7 +51,6 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocumen
 	bar := progressbar.Default(numBatches)
 
 	for batch := range batches {
-		//log.Printf("processing batch #%-5d (%5.1f%%)\n", numProcessed, (float64(numProcessed)/float64(numBatches))*100)
 		var buf bytes.Buffer // to collect the bytes of the batch payload
 		for _, c := range batch {
 			// Prepare the metadata payload
@@ -75,6 +76,41 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocumen
 		numErrors += int64(errorCount)
 		numProcessed++
 		_ = bar.Add(1)
+	}
+
+	return numIndexed, numErrors, nil
+}
+
+func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, bar *mpb.Bar) (numIndexed, numErrors int64, err error) {
+	var numProcessed int64 = 1
+
+	for batch := range batches {
+		var buf bytes.Buffer // to collect the bytes of the batch payload
+		var start = time.Now()
+		for _, c := range batch {
+			// Prepare the metadata payload
+			//
+			var idField = c.GetID()
+			meta := []byte(fmt.Sprintf(`{ "index" : { "_id" : "%s" } }%s`, idField, "\n"))
+			data, err := json.Marshal(c)
+			if err != nil {
+				return numIndexed, numErrors, errors.New(fmt.Sprintf("Cannot encode entity %s: %s", idField, err))
+			}
+			data = append(data, "\n"...)
+
+			buf.Grow(len(meta) + len(data))
+			buf.Write(meta)
+			buf.Write(data)
+
+		}
+		indexCount, errorCount, err := bulkIndex(es, buf, indexName, BulkInsertSize)
+		if err != nil {
+			return numIndexed, numErrors, err
+		}
+		numIndexed += int64(indexCount)
+		numErrors += int64(errorCount)
+		numProcessed++
+		bar.EwmaIncrement(time.Since(start))
 	}
 
 	return numIndexed, numErrors, nil

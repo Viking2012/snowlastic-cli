@@ -25,13 +25,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/vbauerster/mpb/v8"
+	"github.com/vbauerster/mpb/v8/decor"
 	"golang.org/x/sync/errgroup"
 	"log"
 	"math"
+	"regexp"
 	es "snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
+	"sync"
 	"time"
 )
 
@@ -87,13 +92,13 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 
 	g := errgroup.Group{}
+	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg))
 
 	for _, seg := range segments {
 		var segment interface{}
 		segment = seg
 		g.Go(func() error {
-			fmt.Println("getting cases from", segment)
-
 			var thisQuery string
 			switch segment {
 			case "*", "%", "all":
@@ -111,6 +116,22 @@ func runImport(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
+
+			bar := p.AddBar(int64(numBatches),
+				//mpb.BarRemoveOnComplete(),
+				mpb.PrependDecorators(
+					//decor.Name(barName, decor.WC{W: len(barName) + 1, C: decor.DidentRight}),
+					decor.Name(fmt.Sprintf("%v", segment), decor.WCSyncSpaceR),
+					decor.CountersNoUnit("%5d/%5d", decor.WCSyncWidth),
+				),
+				mpb.AppendDecorators(
+					decor.Percentage(decor.WC{W: 5}),
+					decor.OnComplete(
+						// ETA decorator with ewma age of 30
+						decor.EwmaETA(decor.ET_STYLE_GO, 30, decor.WCSyncWidth), " done",
+					),
+				),
+			)
 
 			start := time.Now().UTC()
 			var cases = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
@@ -135,12 +156,22 @@ func runImport(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("problem with getting elasticsearch clinet for segment %s: %s", segment, err)
 			}
 			batches := es.BatchEntities(cases, es.BulkInsertSize)
-			numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
+			numIndexed, numErrors, err := es.BulkImportWithMPB(c, batches, indexName, bar)
 			if err != nil {
 				return fmt.Errorf("problem with bulk importing for segment %s: %s", segment, err)
 			}
+			if numErrors > 0 {
+				return errors.New(fmt.Sprintf(
+					"%s:\tIndexed [%s] documents with [%s] errors in %s (%s docs/sec)",
+					fmt.Sprintf("%s: %s=%v", indexName, segmenter, segment),
+					humanize.Comma(int64(numIndexed)),
+					humanize.Comma(int64(numErrors)),
+					time.Since(start).Truncate(time.Millisecond),
+					humanize.Comma(int64(1000.0/float64(time.Since(start)/time.Millisecond)*float64(numIndexed))),
+				))
+			}
 
-			return reportImport(fmt.Sprintf("%s: %s=%v", indexName, segmenter, segment), time.Since(start), numIndexed, numErrors)
+			return nil
 		})
 	}
 	return g.Wait()
@@ -150,6 +181,21 @@ func quoteParam(i interface{}) string {
 	switch i.(type) {
 	case string:
 		return fmt.Sprintf("'%s'", i)
+	case int, int8, int16, int32, int64:
+		return fmt.Sprintf("%d", i)
+	case float32, float64:
+		return fmt.Sprintf("%f", i)
+	}
+	return ""
+}
+func quoteField(i interface{}) string {
+	switch i.(type) {
+	case string:
+		whitespace := regexp.MustCompile(`\s`).MatchString(i.(string))
+		if whitespace {
+			return fmt.Sprintf(`"%s"`, i)
+		}
+		return fmt.Sprintf("%s", i)
 	case int, int8, int16, int32, int64:
 		return fmt.Sprintf("%d", i)
 	case float32, float64:
