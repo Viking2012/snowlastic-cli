@@ -222,11 +222,24 @@ func quoteParam(i interface{}) string {
 func quoteField(i interface{}) string {
 	switch i.(type) {
 	case string:
-		nedsQuotes, _ := needsQuoting(i.(string))
-		if nedsQuotes {
-			return fmt.Sprintf(`"%s"`, i)
+		var needsQuotes bool
+		var ret string
+		re := regexp.MustCompile(`^(.*\()(.*)(\).*)`)
+		match := re.FindStringSubmatch(`"Creation Date"`)
+		if len(match) != 0 {
+			needsQuotes, _ = needsQuoting(match[2])
+			if needsQuotes {
+				ret = fmt.Sprintf(`%s"%s"%s`, match[1], match[2], match[3])
+			}
+			ret = fmt.Sprintf(`%s%s%s`, match[1], match[2], match[3])
+		} else {
+			needsQuotes, _ = needsQuoting(i.(string))
+			if needsQuotes {
+				ret = fmt.Sprintf(`"%s"`, i)
+			}
+			ret = fmt.Sprintf("%s", i)
 		}
-		return fmt.Sprintf("%s", i)
+		return ret
 	case int, int8, int16, int32, int64:
 		return fmt.Sprintf("%d", i)
 	case float32, float64:
