@@ -22,16 +22,10 @@ THE SOFTWARE.
 package _import
 
 import (
-	"database/sql"
 	"errors"
-	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
-	"math"
-	"snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
-	"time"
 )
 
 // import/casesCmd represents the import/cases command
@@ -50,60 +44,9 @@ var casesCmd = &cobra.Command{
 			dbSchema  = "SQL_NAVEX"
 			dbTable   = "" // there are multiple, which are handled in the GetQuery return
 			indexName = "cases"
-			docType   = orm.PurchaseOrder{}
-
-			db    *sql.DB
-			query = docType.GetQuery(dbSchema, dbTable)
-			c     *elasticsearch.Client
-			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
-
-			err error
+			docType   = (&orm.Case{}).New()
 		)
-
-		db, err = generateDB(dbSchema)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer db.Close()
-
-		var rowCount int64
-		var numBatches float64
-		rowCount, err = getRowCount(db, query)
-		if err != nil {
-			return err
-		}
-		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
-
-		start := time.Now().UTC()
-		go func() {
-			log.Printf("reading %s from database\n", indexName)
-			rows, err := db.Query(query)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for rows.Next() {
-				var c orm.Case
-				if err := c.ScanFrom(rows); err != nil {
-					log.Fatal(err)
-				}
-				docs <- &c
-			}
-			close(docs)
-		}()
-
-		// Get the generated elasticsearch client
-		c, err = getElasticClient(ElasticsearchClientLocator)
-		if err != nil {
-			return err
-		}
-		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Printf("indexing %s\n", indexName)
-		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
-		if err != nil {
-			return err
-		}
-
-		return reportImport(indexName, time.Since(start), numIndexed, numErrors)
+		return runSegmentedImport(dbSchema, dbTable, indexName, docType)
 	},
 }
 

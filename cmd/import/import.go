@@ -87,10 +87,8 @@ func Add() *cobra.Command {
 func init() {
 	importCmd.AddCommand(demoCmd)
 	importCmd.AddCommand(casesCmd)
-	importCmd.AddCommand(casesSegmentedCmd)
 	importCmd.AddCommand(fileCmd)
 	importCmd.AddCommand(purchaseOrdersCmd)
-	importCmd.AddCommand(purchaseOrdersSegmentedCmd)
 
 	importCmd.PersistentFlags().StringVar(&segmenter, "by", "", "a field or SQL aggregating function used to split the import")
 	importCmd.PersistentFlags().StringSliceVar(&givenSegments, "in", []string{}, "limit the import of the field defined in the 'by' argument to a comma seperated list of values")
