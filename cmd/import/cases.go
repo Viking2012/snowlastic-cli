@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"math"
-	es "snowlastic-cli/pkg/es"
+	"snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
 	"time"
 )

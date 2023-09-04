@@ -46,7 +46,7 @@ import (
 )
 
 var (
-	ElasticsearchClientLocator string = "esClient"
+	ElasticsearchClientLocator = "esClient"
 
 	segmenter     string
 	givenSegments []string
@@ -142,8 +142,8 @@ func reportImport(prefix string, dur time.Duration, numIndexed, numErrors int64)
 		return errors.New(fmt.Sprintf(
 			"%s:\tIndexed [%s] documents with [%s] errors in %s (%s docs/sec)",
 			prefix,
-			humanize.Comma(int64(numIndexed)),
-			humanize.Comma(int64(numErrors)),
+			humanize.Comma(numIndexed),
+			humanize.Comma(numErrors),
 			dur.Truncate(time.Millisecond),
 			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
 		))
@@ -151,7 +151,7 @@ func reportImport(prefix string, dur time.Duration, numIndexed, numErrors int64)
 		log.Printf(
 			"%s:\tSucessfully indexed [%s] documents in %s (%s docs/sec)",
 			prefix,
-			humanize.Comma(int64(numIndexed)),
+			humanize.Comma(numIndexed),
 			dur.Truncate(time.Millisecond),
 			humanize.Comma(int64(1000.0/float64(dur/time.Millisecond)*float64(numIndexed))),
 		)
@@ -399,8 +399,8 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 				return errors.New(fmt.Sprintf(
 					"%s:\tIndexed [%s] documents with [%s] errors in %s (%s docs/sec)",
 					fmt.Sprintf("%s: %s=%v", indexName, segmenter, segment),
-					humanize.Comma(int64(numIndexed)),
-					humanize.Comma(int64(numErrors)),
+					humanize.Comma(numIndexed),
+					humanize.Comma(numErrors),
 					time.Since(start).Truncate(time.Millisecond),
 					humanize.Comma(int64(1000.0/float64(time.Since(start)/time.Millisecond)*float64(numIndexed))),
 				))

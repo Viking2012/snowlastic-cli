@@ -51,9 +51,9 @@ var fileCmd = &cobra.Command{
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
-			indexName string = viper.GetString("identifier")
+			indexName = viper.GetString("identifier")
 
-			filePath string = args[0]
+			filePath = args[0]
 			As       []Anon
 
 			c *elasticsearch.Client
@@ -147,5 +147,5 @@ func (a *Anon) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (a *Anon) GetQuery(string, string) string { return "" }
-func (a *Anon) ScanFrom(rows *sql.Rows) error  { return nil }
+func (a *Anon) ScanFrom(*sql.Rows) error       { return nil }
 func (a *Anon) New() orm.SnowlasticDocument    { return new(Anon) }

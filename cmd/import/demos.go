@@ -125,7 +125,7 @@ func (d *Demo) IsICMEntity() bool              { return true }
 func (d *Demo) IsDocument()                    {}
 func (d *Demo) GetID() string                  { return strconv.Itoa(d.ID) }
 func (d *Demo) GetQuery(string, string) string { return "" }
-func (d *Demo) ScanFrom(rows *sql.Rows) error  { return nil }
+func (d *Demo) ScanFrom(*sql.Rows) error       { return nil }
 func (d *Demo) New() orm.SnowlasticDocument    { return new(Demo) }
 
 const _demos string = `[
