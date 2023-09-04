@@ -48,7 +48,8 @@ import (
 var (
 	ElasticsearchClientLocator string = "esClient"
 
-	segmenter string
+	segmenter     string
+	givenSegments []string
 )
 
 // importCmd represents the import command
@@ -68,6 +69,10 @@ from a json file containing a list of documents.`,
 			return err
 		}
 		viper.Set(ElasticsearchClientLocator, c)
+
+		if cmd.Flags().Lookup("in").Changed && !cmd.Flags().Lookup("by").Changed {
+			return errors.New("you must specify a 'by' field in order to use the 'in' argument")
+		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -88,6 +93,7 @@ func init() {
 	importCmd.AddCommand(purchaseOrdersSegmentedCmd)
 
 	importCmd.PersistentFlags().StringVar(&segmenter, "by", "", "a field or SQL aggregating function used to split the import")
+	importCmd.PersistentFlags().StringSliceVar(&givenSegments, "in", []string{}, "limit the import of the field defined in the 'by' argument to a comma seperated list of values")
 }
 
 // Elasticsearch utilities
@@ -155,7 +161,6 @@ func reportImport(prefix string, dur time.Duration, numIndexed, numErrors int64)
 
 // Database utilities
 func generateDB(schema string) (*sql.DB, error) {
-	log.Println("connecting to database")
 	return snowflake.NewDB(snowflake.Config{
 		Account:   viper.GetString("snowflakeAccount"),
 		Warehouse: viper.GetString("snowflakeWarehouse"),
@@ -230,7 +235,11 @@ func quoteField(i interface{}) string {
 	return ""
 }
 func needsQuoting(field string) (bool, error) {
-	matched, err := regexp.Match(`^[A-Za-z_].*`, []byte(field))
+	var (
+		matched bool
+		err     error
+	)
+	matched, err = regexp.Match(`^[A-Za-z_].*`, []byte(field))
 	if err != nil {
 		return true, err
 	}
@@ -238,6 +247,7 @@ func needsQuoting(field string) (bool, error) {
 		return true, nil
 	}
 
+	// contains any non-alphanumeric character
 	matched, err = regexp.Match(".*[^A-Za-z0-9_].*", []byte(field))
 	if err != nil {
 		return true, err
@@ -246,6 +256,7 @@ func needsQuoting(field string) (bool, error) {
 		return true, nil
 	}
 
+	// Is not all uppercase
 	if !isUpper(field) {
 		return true, nil
 	}
@@ -282,12 +293,18 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 
 	var segments []interface{}
 	if segmenter != "" {
-		segments, err = getSegments(db, query, quoteField(segmenter))
+		if len(givenSegments) == 0 {
+			segments, err = getSegments(db, query, quoteField(segmenter))
+		} else {
+			segments = make([]interface{}, len(givenSegments))
+			for i := range givenSegments {
+				segments[i] = givenSegments[i]
+			}
+		}
 	} else {
 		segments = []interface{}{"*"}
 		err = nil
 	}
-	log.Printf("processing %d segments into %s\n", len(segments), indexName)
 	if err != nil {
 		return err
 	}
@@ -308,7 +325,7 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 			case nil:
 				thisQuery = query + " WHERE " + quoteField(segmenter) + " IS NULL" + " LIMIT " + randBetween(3000, 6000)
 			default:
-				thisQuery = query + " WHERE " + quoteField(segmenter) + "= " + quoteParam(segment) + " LIMIT " + randBetween(3000, 6000)
+				thisQuery = query + " WHERE " + quoteField(segmenter) + " = " + quoteParam(segment) + " LIMIT " + randBetween(3000, 6000)
 			}
 
 			var rowCount int64
