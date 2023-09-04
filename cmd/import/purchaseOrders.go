@@ -22,80 +22,23 @@ THE SOFTWARE.
 package _import
 
 import (
-	"database/sql"
-	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/spf13/cobra"
-	"log"
-	"math"
-	"snowlastic-cli/pkg/es"
 	orm "snowlastic-cli/pkg/orm"
-	"time"
 )
 
 // purchaseOrdersCmd represents the import/purchaseOrders command
 var purchaseOrdersCmd = &cobra.Command{
-	Use:   "purchaseOrders",
+	Use:   "purchaseorders",
 	Short: "Index all Purchase Orders contained in the snowflake database",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var (
 			dbSchema  = "CMP"
-			dbTable   = "PURCHASEORDERS_FLAGGED"
+			dbTable   = "PURCHASEORDERS_FLAGGED" // there are multiple, which are handled in the GetQuery return
 			indexName = "purchaseorders"
-			docType   = orm.PurchaseOrder{}
-
-			db    *sql.DB
-			query = docType.GetQuery(dbSchema, dbTable)
-			c     *elasticsearch.Client
-			docs  = make(chan orm.SnowlasticDocument, es.BulkInsertSize)
-
-			err error
+			docType   = (&orm.PurchaseOrder{}).New()
 		)
-
-		db, err = generateDB(dbSchema)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer db.Close()
-
-		var rowCount int64
-		var numBatches float64
-		rowCount, err = getRowCount(db, query)
-		if err != nil {
-			return err
-		}
-		numBatches = math.Ceil(float64(rowCount) / es.BulkInsertSize)
-
-		start := time.Now().UTC()
-		go func() {
-			log.Printf("reading %s from database\n", indexName)
-			rows, err := db.Query(query)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for rows.Next() {
-				var c orm.Case
-				if err := c.ScanFrom(rows); err != nil {
-					log.Fatal(err)
-				}
-				docs <- &c
-			}
-			close(docs)
-		}()
-
-		// Get the generated elasticsearch client
-		c, err = getElasticClient(ElasticsearchClientLocator)
-		if err != nil {
-			return err
-		}
-		batches := es.BatchEntities(docs, es.BulkInsertSize)
-		log.Printf("indexing %s\n", indexName)
-		numIndexed, numErrors, err := es.BulkImport(c, batches, indexName, int64(numBatches))
-		if err != nil {
-			return err
-		}
-
-		return reportImport(indexName, time.Since(start), numIndexed, numErrors)
+		return runSegmentedImport(dbSchema, dbTable, indexName, docType)
 	},
 }
 

@@ -3,12 +3,9 @@ package es
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/spf13/viper"
 	"log"
 	"net/http"
-	"os"
 )
 
 type ElasticClientConfig struct {
@@ -31,7 +28,7 @@ func NewElasticClient(cfg *ElasticClientConfig) (*elasticsearch.Client, error) {
 		log.Println("No certs appended, using system certs only")
 	}
 
-	var c elasticsearch.Config = elasticsearch.Config{
+	var c = elasticsearch.Config{
 		Addresses:    cfg.Addresses,
 		Username:     cfg.User,
 		Password:     cfg.Pass,
@@ -45,34 +42,4 @@ func NewElasticClient(cfg *ElasticClientConfig) (*elasticsearch.Client, error) {
 	}
 	es, err := elasticsearch.NewClient(c)
 	return es, err
-}
-
-func NewDefaultClient() (*elasticsearch.Client, error) {
-	var (
-		err        error
-		caCert     []byte
-		caCertPath string
-		cfg        ElasticClientConfig
-		c          *elasticsearch.Client
-	)
-
-	// generate the CA Certificate bytes needed for the elasticsearch Config
-	caCertPath = viper.GetString("elasticCaCertPath")
-	caCert, err = os.ReadFile(caCertPath)
-	if err != nil {
-		return c, err
-	}
-	cfg = ElasticClientConfig{
-		Addresses: []string{fmt.Sprintf(
-			"https://%s:%s",
-			viper.GetString("elasticUrl"),
-			viper.GetString("elasticPort"),
-		)},
-		User:         viper.GetString("elasticUser"),
-		Pass:         viper.GetString("elasticPassword"),
-		ApiKey:       viper.GetString("elasticApiKey"),
-		ServiceToken: viper.GetString("elasticServiceToken"),
-		CaCert:       caCert,
-	}
-	return NewElasticClient(&cfg)
 }
