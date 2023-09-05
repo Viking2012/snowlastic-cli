@@ -11,8 +11,7 @@
             "lowercase",
             "stop",
             "asciifolding",
-            "stemmer",
-            "edge_ngram"
+            "stemmer"
           ]
         }
       },

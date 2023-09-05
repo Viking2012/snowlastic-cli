@@ -296,12 +296,14 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 		err error
 	)
 
+	log.Println("connecting to database...")
 	db, err = generateDB(dbSchema)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
+	log.Println("determining segments...")
 	var segments []interface{}
 	if segmenter != "" {
 		if len(givenSegments) == 0 {
@@ -319,6 +321,7 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 	if err != nil {
 		return err
 	}
+	log.Printf("found %d segments...\n", len(segments))
 
 	g := errgroup.Group{}
 	g.SetLimit(5)
@@ -334,9 +337,9 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 			case "*", "%", "all":
 				thisQuery = query
 			case nil:
-				thisQuery = query + " WHERE " + quoteField(segmenter) + " IS NULL" + " LIMIT " + randBetween(3000, 6000)
+				thisQuery = query + " WHERE " + quoteField(segmenter) + " IS NULL" + " LIMIT " + randBetween(5000, 10000)
 			default:
-				thisQuery = query + " WHERE " + quoteField(segmenter) + " = " + quoteParam(segment) + " LIMIT " + randBetween(3000, 6000)
+				thisQuery = query + " WHERE " + quoteField(segmenter) + " = " + quoteParam(segment) + " LIMIT " + randBetween(5000, 10000)
 			}
 
 			var rowCount int64

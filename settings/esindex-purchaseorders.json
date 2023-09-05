@@ -5,7 +5,7 @@
         "poAnalyzer": {
           "char_filter": ["html_strip"],
           "tokenizer": "standard",
-          "filter": ["lowercase","stop","asciifolding","stemmer","edge_ngram"]
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
         }
       },
       "normalizer": {
