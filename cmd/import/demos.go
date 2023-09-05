@@ -150,7 +150,7 @@ const _demos string = `[
   {
     "id": 4,
     "search-term": "against /5 law!",
-    "value": "against isn't a term contained in the law",
+    "value": "against isn't a term that we expect to be contained anywhere in the law",
     "should-match": false
   },
   {
