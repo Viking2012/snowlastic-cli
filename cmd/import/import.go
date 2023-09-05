@@ -222,20 +222,22 @@ func quoteField(i interface{}) string {
 	case string:
 		var needsQuotes bool
 		var ret string
-		re := regexp.MustCompile(`^(.*\()(.*)(\).*)`)
-		match := re.FindStringSubmatch(`"Creation Date"`)
+		re := regexp.MustCompile(`^(.+\()(.+)(\))`)
+		match := re.FindStringSubmatch(i.(string))
 		if len(match) != 0 {
 			needsQuotes, _ = needsQuoting(match[2])
 			if needsQuotes {
 				ret = fmt.Sprintf(`%s"%s"%s`, match[1], match[2], match[3])
+			} else {
+				ret = fmt.Sprintf(`%s%s%s`, match[1], match[2], match[3])
 			}
-			ret = fmt.Sprintf(`%s%s%s`, match[1], match[2], match[3])
 		} else {
 			needsQuotes, _ = needsQuoting(i.(string))
 			if needsQuotes {
 				ret = fmt.Sprintf(`"%s"`, i)
+			} else {
+				ret = fmt.Sprintf("%s", i)
 			}
-			ret = fmt.Sprintf("%s", i)
 		}
 		return ret
 	case int, int8, int16, int32, int64:
@@ -250,6 +252,13 @@ func needsQuoting(field string) (bool, error) {
 		matched bool
 		err     error
 	)
+	matched, err = regexp.Match(`^".+"$`, []byte(field))
+	if err != nil {
+		return true, err
+	}
+	if matched {
+		return false, nil
+	}
 	matched, err = regexp.Match(`^[A-Za-z_].*`, []byte(field))
 	if err != nil {
 		return true, err
@@ -303,7 +312,7 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 	}
 	defer db.Close()
 
-	log.Println("determining segments...")
+	log.Printf("determining segments of %s...\n", quoteField(segmenter))
 	var segments []interface{}
 	if segmenter != "" {
 		if len(givenSegments) == 0 {
@@ -341,6 +350,7 @@ func runSegmentedImport(dbSchema, dbTable, indexName string, docType orm.Snowlas
 			default:
 				thisQuery = query + " WHERE " + quoteField(segmenter) + " = " + quoteParam(segment) + " LIMIT " + randBetween(5000, 10000)
 			}
+			log.Println(thisQuery)
 
 			var rowCount int64
 			var numBatches float64
