@@ -46,12 +46,14 @@ var knownIndices map[string]string
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create index-name [--settings ./path/to/settings.json]",
+	Use:   "create index-name.... [--settings ./path/to/settings.json]",
 	Short: "Create an elasticsearch index",
 	Long: `Create an elasticsearch index of the given name, optionally with explicit settings from a json file
-Example: create demos --settings ./settings/esindex-demos.json
+Example/Multiple Indices : create sap_checks sap_purchaseorders navex_cases demos 
+Example/Explicit Settings: create demos --settings ./settings/esindex-demos.json
 
 Indices created without the --settings flag will be created with the elasticsearch servers default settings.
+If the --settings flag is provided with multiple index names, this file will be used to create each index.
 The following ICM Entities have pre-defined settings which will override the server defaults, even without a --settings flag being provided:
   ICM Entity                          | Index name	   			|	Example command
 -----------------------------------------------------------------------------------------
@@ -61,10 +63,10 @@ The following ICM Entities have pre-defined settings which will override the ser
 - Purchase Orders 						sap_purchaseorders		  	create index sap_purchaseorders
 - Sales Orders 							sap_salesorders				create index sap_salesorders
 
-go run m- Navex cases 							navex_cases				  	create index navex_cases
+- Navex cases 							navex_cases				  	create index navex_cases
 
 - Demonstrations and keyword testing 	demos				  		create index demos`,
-	Args: cobra.ExactArgs(1),
+	//Args: cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		var givenIndex = args[0]
 		// initialize primary variables
@@ -76,7 +78,7 @@ go run m- Navex cases 							navex_cases				  	create index navex_cases
 			"sap_invoices":            defaultIndexSettings,
 			"sap_purchaseorders":      defaultIndexSettings,
 			"sap_salesorders":         defaultIndexSettings,
-			"navex_cases":             path.Join(settingsDir, "esindex-cases.json"),
+			"navex_cases":             path.Join(settingsDir, "esindex-navex_cases.json"),
 			"demos":                   path.Join(settingsDir, "esindex-demos.json"),
 			"test":                    defaultIndexSettings,
 		}
@@ -87,6 +89,7 @@ go run m- Navex cases 							navex_cases				  	create index navex_cases
 		return
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Println("args:", args)
 		var (
 			c   *elasticsearch.Client
 			err error
@@ -101,28 +104,30 @@ go run m- Navex cases 							navex_cases				  	create index navex_cases
 			return err
 		}
 
-		givenIndex = args[0]
+		for i := range args {
+			givenIndex = args[i]
 
-		if isKnownIndex(knownIndices, givenIndex) && settings == "" {
-			settingsFilepath = knownIndices[givenIndex]
-		} else {
-			settingsFilepath = settings
-		}
+			if isKnownIndex(knownIndices, givenIndex) && settings == "" {
+				settingsFilepath = knownIndices[givenIndex]
+			} else {
+				settingsFilepath = settings
+			}
 
-		var b []byte
-		if settingsFilepath != "" {
-			log.Println("using settings defined in", settingsFilepath)
-			b, err = os.ReadFile(settingsFilepath)
+			var b []byte
+			if settingsFilepath != "" {
+				log.Println("using settings defined in", settingsFilepath)
+				b, err = os.ReadFile(settingsFilepath)
+				if err != nil {
+					return err
+				}
+			} else {
+				log.Printf("%s was not a known default index and will be created with dynamic mapping (no settings)", givenIndex)
+			}
+
+			err = createIndex(c, b, givenIndex)
 			if err != nil {
 				return err
 			}
-		} else {
-			log.Printf("%s was not a known default index and will be created with dynamic mapping (no settings)", givenIndex)
-		}
-
-		err = createIndex(c, b, givenIndex)
-		if err != nil {
-			return err
 		}
 
 		return nil
@@ -150,7 +155,7 @@ func createIndex(c *elasticsearch.Client, settings []byte, indexName string) err
 
 	res, err = c.Indices.Delete([]string{indexName})
 	if err != nil {
-		return fmt.Errorf("cannot delete index: %s", err)
+		return fmt.Errorf("cannot delete index: %s", res.Status())
 	}
 
 	s = res.String()
@@ -161,7 +166,7 @@ func createIndex(c *elasticsearch.Client, settings []byte, indexName string) err
 	}
 
 	if res.IsError() {
-		log.Println("warning when deleting index", s)
+		log.Println("warning when deleting index", res.Status())
 	} else {
 		log.Printf("deleted index %s", indexName)
 	}
