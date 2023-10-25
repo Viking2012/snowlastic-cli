@@ -1,0 +1,51 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "documentAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "documentNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "Database":                   {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Company Code ID":            {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Company Code":               {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Document Category Code":     {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Document Category":          {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Document Type Code":         {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Document Type":              {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Deletion Indicator":         {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Creation Date":              {"type": "date"                                       },
+      "Created By":                 {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Entity Type":                {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Entity ICM ID":              {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Entity Number":              {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Entity":                     {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Document Date":              {"type": "date"                                       },
+      "Document Text":              {"type": "text"                                       },
+      "Material Code":              {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Material":                   {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Material Group Code":        {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Material Group":             {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 1 Code": {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 1":      {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 2 Code": {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 2":      {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 3 Code": {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Organization, Level 3":      {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "Flags":                      {"type":  "nested", "include_in_root": true}
+    }
+  }
+}

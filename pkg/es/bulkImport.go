@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	"github.com/schollz/progressbar/v3"
 	"github.com/vbauerster/mpb/v8"
 	"log"
 	orm "snowlastic-cli/pkg/orm"
@@ -46,42 +45,7 @@ func BatchEntities(docs <-chan orm.SnowlasticDocument, batchSize int) chan []orm
 	return batches
 }
 
-func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, numBatches int64) (numIndexed, numErrors int64, err error) {
-	var numProcessed int64 = 1
-	bar := progressbar.Default(numBatches)
-
-	for batch := range batches {
-		var buf bytes.Buffer // to collect the bytes of the batch payload
-		for _, c := range batch {
-			// Prepare the metadata payload
-			//
-			var idField = c.GetID()
-			meta := []byte(fmt.Sprintf(`{ "index" : { "_id" : "%s" } }%s`, idField, "\n"))
-			data, err := json.Marshal(c)
-			if err != nil {
-				return numIndexed, numErrors, errors.New(fmt.Sprintf("Cannot encode entity %s: %s", idField, err))
-			}
-			data = append(data, "\n"...)
-
-			buf.Grow(len(meta) + len(data))
-			buf.Write(meta)
-			buf.Write(data)
-
-		}
-		indexCount, errorCount, err := bulkIndex(es, buf, indexName, BulkInsertSize)
-		if err != nil {
-			return numIndexed, numErrors, err
-		}
-		numIndexed += int64(indexCount)
-		numErrors += int64(errorCount)
-		numProcessed++
-		_ = bar.Add(1)
-	}
-
-	return numIndexed, numErrors, nil
-}
-
-func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, bar *mpb.Bar) (numIndexed, numErrors int64, err error) {
+func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocument, indexName string, bar *mpb.Bar) (numIndexed, numErrors int64, err error) {
 	for batch := range batches {
 		var buf bytes.Buffer // to collect the bytes of the batch payload
 		var start = time.Now()
@@ -99,7 +63,7 @@ func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.Snowlastic
 			buf.Grow(len(meta) + len(data))
 			buf.Write(meta)
 			buf.Write(data)
-
+			bar.EwmaIncrement(time.Since(start))
 		}
 		indexCount, errorCount, err := bulkIndex(es, buf, indexName, BulkInsertSize)
 		if err != nil {
@@ -107,7 +71,6 @@ func BulkImportWithMPB(es *elasticsearch.Client, batches <-chan []orm.Snowlastic
 		}
 		numIndexed += int64(indexCount)
 		numErrors += int64(errorCount)
-		bar.EwmaIncrement(time.Since(start))
 	}
 
 	return numIndexed, numErrors, nil
@@ -117,7 +80,7 @@ func bulkIndex(es *elasticsearch.Client, buf bytes.Buffer, indexName string, bat
 	var (
 		res *esapi.Response
 
-		raw map[string]interface{}
+		raw map[string]any
 		blk *BulkResponse
 	)
 
@@ -136,8 +99,8 @@ func bulkIndex(es *elasticsearch.Client, buf bytes.Buffer, indexName string, bat
 		} else {
 			log.Printf("  Error: [%d] %s: %s",
 				res.StatusCode,
-				raw["error"].(map[string]interface{})["type"],
-				raw["error"].(map[string]interface{})["reason"],
+				raw["error"].(map[string]any)["type"],
+				raw["error"].(map[string]any)["reason"],
 			)
 		}
 		// A successful response might still contain errors for particular documents...

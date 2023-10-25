@@ -7,6 +7,11 @@
 # appropriate value. When using environment variables, you should remove
 # or comment out the entry in this file to remove the potential for conflicts.
 
+# The settings directory should contain
+# the default elastic index settings ("esindex-default.json")
+# and the SQL queries used to get the underlying documents
+settingsDirectory: "path/to/settings"
+
 #     _____                     ______      __           ______              __           __  _       __
 #   / ___/____  ____ _      __/ __/ /___ _/ /_____     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____
 #   \__ \/ __ \/ __ \ | /| / / /_/ / __ `/ //_/ _ \   / /   / ___/ _ \/ __  / _ \/ __ \/ __/ / __ `/ / ___/
