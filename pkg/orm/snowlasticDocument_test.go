@@ -17,18 +17,64 @@ func Test_keysToLower(t *testing.T) {
 		want map[string]any
 	}{
 		{
-			name: "converts to lower",
+			name: "string",
 			args: args{map[string]any{
-				"ID":                  "",
-				"TEST":                "",
-				"thisIsATest":         "",
-				"this-is-also-a-test": "",
+				"TEST": "TEST",
 			}},
 			want: map[string]any{
-				"id":                  "",
-				"test":                "",
-				"thisisatest":         "",
-				"this-is-also-a-test": "",
+				"test": "TEST",
+			},
+		},
+		{
+			name: "int",
+			args: args{map[string]any{
+				"TEST": 1,
+			}},
+			want: map[string]any{
+				"test": 1,
+			},
+		},
+		{
+			name: "bool",
+			args: args{map[string]any{
+				"TEST": false,
+			}},
+			want: map[string]any{
+				"test": false,
+			},
+		},
+		{
+			name: "nested",
+			args: args{map[string]any{
+				"TEST": map[string]any{
+					"NESTED": "nested",
+				},
+			}},
+			want: map[string]any{
+				"test": map[string]any{
+					"nested": "nested",
+				},
+			},
+		},
+		{
+			name: "deeply nested",
+			args: args{map[string]any{
+				"MAP_OF_MAPS": map[string]any{
+					"LEVEL1": map[string]any{
+						"LEVEL-2": map[string]any{
+							"FLOOR": nil,
+						},
+					},
+				},
+			}},
+			want: map[string]any{
+				"map_of_maps": map[string]any{
+					"level1": map[string]any{
+						"level-2": map[string]any{
+							"floor": nil,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -145,7 +191,24 @@ func TestDocument_MarshalJSON(t *testing.T) {
 		want    []byte
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "simple",
+			fields: fields{map[string]any{
+				"id":   "1",
+				"test": "TEST",
+			}},
+			want:    []byte(`{"id":"1","test":"TEST"}`),
+			wantErr: false,
+		},
+		{
+			name: "simple",
+			fields: fields{map[string]any{
+				"id":   "1",
+				"test": nil,
+			}},
+			want:    []byte(`{"id":"1"}`),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -158,7 +221,7 @@ func TestDocument_MarshalJSON(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MarshalJSON() got = %v, want %v", got, tt.want)
+				t.Errorf("MarshalJSON() got = %s, want %s", string(got), string(tt.want))
 			}
 		})
 	}

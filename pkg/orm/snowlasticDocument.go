@@ -42,7 +42,7 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 		columns        []any
 		columnPointers []any
 
-		result map[string]any
+		result = make(map[string]any)
 	)
 	cols, err = rows.Columns()
 	if err != nil {
@@ -63,10 +63,18 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 		result[colName] = *val
 	}
 	d.m = keysToLower(result)
+	//d.m = result
 	return nil
 }
 func (d *Document) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.m)
+	var m = make(map[string]any)
+	for k, v := range d.m {
+		if v != nil {
+			m[k] = v
+		}
+	}
+	return json.Marshal(m)
+	//return json.Marshal(d.m)
 }
 
 func NewDocument() SnowlasticDocument {
@@ -75,13 +83,34 @@ func NewDocument() SnowlasticDocument {
 }
 func NewDocumentFromMap(m map[string]any) SnowlasticDocument {
 	return &Document{m: keysToLower(m)}
+	//return &Document{m: m}
 }
 
 func keysToLower(m map[string]any) map[string]any {
 	var n = make(map[string]any)
 	for key := range m {
 		lowercaseKey := strings.ToLower(key)
-		n[lowercaseKey] = m[key]
+		var val = m[key]
+		n[lowercaseKey] = lower(val)
 	}
 	return n
+}
+
+func lower(v any) any {
+	switch v := v.(type) {
+	case []any:
+		lv := make([]any, len(v))
+		for i := range v {
+			lv[i] = lower(v[i])
+		}
+		return lv
+	case map[string]any:
+		lv := make(map[string]any, len(v))
+		for mk, mv := range v {
+			lv[strings.ToLower(mk)] = lower(mv)
+		}
+		return lv
+	default:
+		return v
+	}
 }
