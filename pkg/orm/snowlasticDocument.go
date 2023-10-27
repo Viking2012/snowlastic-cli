@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 type SnowlasticDocument interface {
@@ -40,6 +41,8 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 		cols           []string
 		columns        []any
 		columnPointers []any
+
+		result map[string]any
 	)
 	cols, err = rows.Columns()
 	if err != nil {
@@ -57,8 +60,9 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 
 	for i, colName := range cols {
 		val := columnPointers[i].(*interface{})
-		d.m[colName] = *val
+		result[colName] = *val
 	}
+	d.m = keysToLower(result)
 	return nil
 }
 func (d *Document) MarshalJSON() ([]byte, error) {
@@ -70,5 +74,14 @@ func NewDocument() SnowlasticDocument {
 	return &Document{m: m}
 }
 func NewDocumentFromMap(m map[string]any) SnowlasticDocument {
-	return &Document{m: m}
+	return &Document{m: keysToLower(m)}
+}
+
+func keysToLower(m map[string]any) map[string]any {
+	var n = make(map[string]any)
+	for key := range m {
+		lowercaseKey := strings.ToLower(key)
+		n[lowercaseKey] = m[key]
+	}
+	return n
 }
