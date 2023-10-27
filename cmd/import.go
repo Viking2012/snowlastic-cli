@@ -84,7 +84,7 @@ from a json file containing a list of documents.`,
 		var start = time.Now()
 
 		log.Println("connecting to elasticsearch...")
-		client, err = generateElasticClient()
+		client, err = generateDefaultElasticClient()
 		if err != nil {
 			cancel(err)
 		}
@@ -92,12 +92,26 @@ from a json file containing a list of documents.`,
 		switch viper.GetString("file") {
 		default:
 			{
+				var docs []types.SnowlasticDocument
 				log.Println("reading records from file", viper.GetString("file"))
+				docs, err = _import.GetRecords(viper.GetString("file"))
+				if err != nil {
+					cancel(err)
+				}
+				totalSize = int64(len(docs))
+				log.Printf("sending %d documents to pipeline...\n", len(docs))
 				go func() {
 					g.Go(func() error {
-						totalSize, err = _import.ImportFile(viper.GetString("file"), c)
-						if err != nil {
-							return err
+						for i := 0; i < len(docs); i++ {
+							select {
+							case <-ctx.Done():
+							default:
+								{
+
+									var doc = docs[i]
+									c <- doc
+								}
+							}
 						}
 						log.Println("completed sending documents...")
 						return nil
@@ -175,7 +189,8 @@ from a json file containing a list of documents.`,
 						segmentedQuery string
 					)
 					h.Go(func() error {
-						segmentCounts, segmentedQuery, err = getSegments(segCtx, db, tmpl, viper.GetString("snowflakeDatabase"), schema, segmenter)
+						segmentedQuery, err = getSegmentedQuery(segCtx, tmpl, viper.GetString("snowflakeDatabase"), schema, segmenter)
+						segmentCounts, err = getSegmentCounts(segCtx, db, tmpl, viper.GetString("snowflakeDatabase"), schema, segmenter)
 						if err != nil {
 							return err
 						}
@@ -282,11 +297,10 @@ func init() {
 	importCmd.Flags().StringSliceVar(&givenSegments, "in", nil, "limit the import of the field defined in the 'by' argument to a comma seperated list of values")
 }
 
-func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, database, schema string, segmenter *string) (segmentCounts map[any]int64, segmentedQuery string, err error) {
+func getSegmentCounts(ctx context.Context, db *sql.DB, baseQuery *template.Template, database, schema string, segmenter *string) (segmentCounts map[any]int64, err error) {
 	var (
 		_segmentCounts    = make(map[any]int64)
 		segmentationQuery = bytes.Buffer{}
-		_segmentedQuery   = bytes.Buffer{}
 		templateData      = map[string]string{"database": database, "schema": schema}
 
 		rows *sql.Rows
@@ -294,7 +308,7 @@ func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, 
 
 	select {
 	case <-ctx.Done():
-		return segmentCounts, segmentedQuery, err
+		return segmentCounts, err
 	default:
 		// generate both the counting query for each segment
 		// and prepare a parameterized query
@@ -309,16 +323,10 @@ func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, 
 						segmentationQuery.WriteString("\n")
 						err = baseQuery.Execute(&segmentationQuery, templateData)
 						if err != nil {
-							return segmentCounts, segmentedQuery, err
+							return segmentCounts, err
 						}
 						segmentationQuery.WriteString("\n")
 						segmentationQuery.WriteString(")")
-
-						// to get actual rows, just use the query
-						err = baseQuery.Execute(&_segmentedQuery, templateData)
-						if err != nil {
-							return segmentCounts, segmentedQuery, err
-						}
 					}
 				}
 			default: // partitioned import by segmenter field
@@ -331,7 +339,7 @@ func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, 
 					segmentationQuery.WriteString("\n")
 					err = baseQuery.Execute(&segmentationQuery, templateData)
 					if err != nil {
-						return segmentCounts, segmentedQuery, err
+						return segmentCounts, err
 					}
 					segmentationQuery.WriteString("\n")
 					segmentationQuery.WriteString(")")
@@ -341,13 +349,62 @@ func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, 
 					segmentationQuery.WriteString("\n")
 					segmentationQuery.WriteString("ORDER BY ")
 					segmentationQuery.WriteString(quotedIdentifier)
+				}
+			}
+		}
+	}
 
+	rows, err = db.QueryContext(ctx, segmentationQuery.String())
+	if err != nil {
+		return segmentCounts, err
+	}
+	for rows.Next() {
+		var segment struct {
+			Value any
+			Count int64
+		}
+		err = rows.Scan(&segment.Value, &segment.Count)
+		if err != nil {
+			return segmentCounts, err
+		}
+		if segment.Count != 0 { // no need to add schema segments which have no rows
+			_segmentCounts[segment.Value] = segment.Count
+		}
+	}
+
+	return _segmentCounts, nil
+}
+func getSegmentedQuery(ctx context.Context, baseQuery *template.Template, database, schema string, segmenter *string) (segmentedQuery string, err error) {
+	var (
+		_segmentedQuery = bytes.Buffer{}
+		templateData    = map[string]string{"database": database, "schema": schema}
+	)
+
+	select {
+	case <-ctx.Done():
+		return _segmentedQuery.String(), err
+	default:
+		{
+			switch {
+			case segmenter == nil:
+				// all rows without segmentation (nil segmenter)
+				{
+					// to get actual rows, just use the query
+					err = baseQuery.Execute(&_segmentedQuery, templateData)
+					if err != nil {
+						return _segmentedQuery.String(), err
+					}
+				}
+			default: // partitioned import by segmenter field
+				{
 					// prepare the base query to accept a segment parameter
+					var quotedIdentifier = snowflake.QuoteIdentifier(*segmenter)
+
 					_segmentedQuery.WriteString("SELECT * FROM (")
 					_segmentedQuery.WriteString("\n")
 					err = baseQuery.Execute(&_segmentedQuery, templateData)
 					if err != nil {
-						return segmentCounts, segmentedQuery, err
+						return _segmentedQuery.String(), err
 					}
 					_segmentedQuery.WriteString(")")
 					_segmentedQuery.WriteString("\n")
@@ -358,24 +415,7 @@ func getSegments(ctx context.Context, db *sql.DB, baseQuery *template.Template, 
 			}
 		}
 	}
-
-	rows, err = db.QueryContext(ctx, segmentationQuery.String())
-	if err != nil {
-		return segmentCounts, segmentedQuery, err
-	}
-	for rows.Next() {
-		var segment struct {
-			Value any
-			Count int64
-		}
-		err = rows.Scan(&segment.Value, &segment.Count)
-		if err != nil {
-			return segmentCounts, segmentedQuery, err
-		}
-		_segmentCounts[segment.Value] = segment.Count
-	}
-
-	return _segmentCounts, _segmentedQuery.String(), nil
+	return _segmentedQuery.String(), err
 }
 
 func SortMapKeys(m map[any]int64) []any {
