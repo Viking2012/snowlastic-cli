@@ -201,7 +201,7 @@ func TestDocument_MarshalJSON(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "simple",
+			name: "exclude nil",
 			fields: fields{map[string]any{
 				"id":   "1",
 				"test": nil,

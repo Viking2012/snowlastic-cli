@@ -62,6 +62,11 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 		val := columnPointers[i].(*interface{})
 		result[colName] = *val
 	}
+	for k := range result {
+		v := result[k]
+		w := deepConvertStrings(v)
+		result[k] = w
+	}
 	d.m = keysToLower(result)
 	//d.m = result
 	return nil
@@ -113,4 +118,36 @@ func lower(v any) any {
 	default:
 		return v
 	}
+}
+
+func deepConvertStrings(v any) any {
+	if v == nil {
+		return nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return v
+	}
+	var err error
+	var m = make(map[string]any)
+	err = json.Unmarshal([]byte(s), &m)
+	if err == nil {
+		for key := range m {
+			m[key] = deepConvertStrings(m[key])
+		}
+		return m
+	}
+	var n []map[string]any
+	err = json.Unmarshal([]byte(s), &n)
+	if err == nil {
+		for i := range n {
+			var p = n[i]
+			for key := range p {
+				p[key] = deepConvertStrings(p[key])
+			}
+			n[i] = p
+		}
+		return n
+	}
+	return v
 }
