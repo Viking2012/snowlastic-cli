@@ -283,8 +283,8 @@ from a json file containing a list of documents.`,
 func init() {
 	rootCmd.AddCommand(importCmd)
 
-	importCmd.Flags().String("id", "ID", "field which uniquely identifies each record (usually 'ID')")
-	_ = importCmd.MarkFlagRequired("id")
+	importCmd.Flags().String("id", "id", "field which uniquely identifies each record (usually 'ID')")
+	//_ = importCmd.MarkFlagRequired("id")
 	_ = viper.BindPFlag("identifier", importCmd.Flags().Lookup("id"))
 
 	importCmd.Flags().String("from", "", "location of query file (defaults to settingsDirectory/query-[index_name].sql)")
