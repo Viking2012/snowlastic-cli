@@ -63,7 +63,9 @@ from a json file containing a list of documents.`,
 		if cmd.Flags().Lookup("in").Changed && !cmd.Flags().Lookup("by").Changed {
 			return errors.New("you must specify a 'by' field in order to use the 'in' argument")
 		}
-		return nil
+		log.Println("setting proxies")
+
+		return setProxy()
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// arguments?
