@@ -32,6 +32,8 @@ SELECT CONCAT_WS('|', '{{.schema}}', PAYR.ZBUKR, PAYR.HBKID, PAYR.HKTID, PAYR.RZ
                       IFNULL(NULLIF(ZNME2, ''), ''),
                       IFNULL(NULLIF(ZNME3, ''), ''),
                       IFNULL(NULLIF(ZNME4, ''), '')), ', ')                                      AS "Document Text",
+       WAERS                                                                                     AS "Document Currency",
+       RWBTR                                                                                     AS "Document Value",
        NULL                                                                                      AS "Material Code",
        NULL                                                                                      AS "Material",
        NULL                                                                                      AS "Material Group Code",

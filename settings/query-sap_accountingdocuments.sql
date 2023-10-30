@@ -39,6 +39,8 @@ SELECT CONCAT_WS('|', '{{.schema}}', BSEG.BUKRS, BSEG.BELNR, BSEG.GJAHR, BSEG.BU
                       IFNULL(CONCAT('HEADER: ', NULLIF(BKPF.BKTXT, ''), '\n'), ''),
                       IFNULL(CONCAT('ITEM: ', NULLIF(BSEG.SGTXT, ''), '\n'), '')
                 ), '\n')                                                             AS "Document Text",
+       BKPF.WAERS                                                                    AS "Document Currency",
+       BSEG.WRBTR                                                                    AS "Document Value",
        NULL                                                                          AS "Material Code",
        NULL                                                                          AS "Material",
        NULL                                                                          AS "Material Group Code",

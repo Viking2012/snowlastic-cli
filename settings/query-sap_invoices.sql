@@ -29,6 +29,8 @@ SELECT CONCAT_WS('|', '{{.schema}}', RBCO.MANDT, RBCO.BELNR, RBCO.GJAHR, RBCO.BU
                       IFNULL(CONCAT('HEADER: ', NULLIF(RBKP.BKTXT, ' '), '\n'), ''),
                       IFNULL(CONCAT('ITEM: ', NULLIF(RBKP.SGTXT, ' '), '\n'), '')
                 ), '\n')                                                                           AS "Document Text",
+       PAYR.WAERS                                                                                  AS "Document Currency",
+       PAYR.RWBTR                                                                                  AS "Document Value",
        NULL                                                                                        AS "Material Code",
        NULL                                                                                        AS "Material",
        NULL                                                                                        AS "Material Group Code",
