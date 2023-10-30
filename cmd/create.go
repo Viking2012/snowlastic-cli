@@ -89,7 +89,6 @@ The following ICM Entities have pre-defined settings which will override the ser
 		return
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		log.Println("args:", args)
 		var (
 			c   *elasticsearch.Client
 			err error
@@ -99,7 +98,7 @@ The following ICM Entities have pre-defined settings which will override the ser
 		)
 
 		// Generate the client
-		c, err = generateElasticClient()
+		c, err = generateDefaultElasticClient()
 		if err != nil {
 			return err
 		}

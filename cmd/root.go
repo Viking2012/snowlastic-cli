@@ -25,8 +25,10 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v8"
 	"log"
 	"os"
+	"snowlastic-cli/pkg/es"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -49,8 +51,16 @@ Create an elasticsearch index from either default settings or a json file.
 Index documents from either a snowflake database or a json file.
 
 TODO: Search the elasticsearch index`,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+
 		setLogLevel()
+		log.Println("setting proxies")
+		err = setProxy()
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -200,4 +210,57 @@ func setLogLevel() {
 		log.SetOutput(os.Stdout)
 		log.Println("verbose setting received...")
 	}
+}
+
+// elasticsearch utilities
+func generateDefaultElasticClient() (*elasticsearch.Client, error) {
+	var (
+		err        error
+		caCert     []byte
+		caCertPath string
+		cfg        es.ElasticClientConfig
+		c          *elasticsearch.Client
+	)
+
+	// generate the CA Certificate bytes needed for the elasticsearch Config
+	caCertPath = viper.GetString("elasticCaCertPath")
+	caCert, err = os.ReadFile(caCertPath)
+	if err != nil {
+		return c, err
+	}
+	cfg = es.ElasticClientConfig{
+		Addresses: []string{fmt.Sprintf(
+			"https://%s:%s",
+			viper.GetString("elasticUrl"),
+			viper.GetString("elasticPort"),
+		)},
+		User:         viper.GetString("elasticUser"),
+		Pass:         viper.GetString("elasticPassword"),
+		ApiKey:       viper.GetString("elasticApiKey"),
+		ServiceToken: viper.GetString("elasticServiceToken"),
+		CaCert:       caCert,
+	}
+	return es.NewElasticClient(&cfg)
+}
+
+func setProxy() error {
+	var err error
+	proxy := getProxy()
+	err = os.Setenv(`HTTP_PROXY`, proxy)
+	if err != nil {
+		return err
+	}
+	err = os.Setenv(`HTTPS_PROXY`, proxy)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getProxy() string {
+	proxy := os.Getenv(`ELT_PROXY`)
+	if len(proxy) > 7 && proxy[:7] != `http://` {
+		proxy = fmt.Sprintf(`http://%v`, proxy)
+	}
+	return proxy
 }

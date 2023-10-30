@@ -49,12 +49,15 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocumen
 	for batch := range batches {
 		var buf bytes.Buffer // to collect the bytes of the batch payload
 		var start = time.Now()
-		for _, c := range batch {
+		for _, doc := range batch {
 			// Prepare the metadata payload
 			//
-			var idField = c.GetID()
+			var idField = doc.GetID()
+			if idField == "" {
+				return numIndexed, numErrors, fmt.Errorf("cannot encode entity %v: %s", doc, err)
+			}
 			meta := []byte(fmt.Sprintf(`{ "index" : { "_id" : "%s" } }%s`, idField, "\n"))
-			data, err := json.Marshal(c)
+			data, err := json.Marshal(doc)
 			if err != nil {
 				return numIndexed, numErrors, errors.New(fmt.Sprintf("Cannot encode entity %s: %s", idField, err))
 			}
@@ -94,7 +97,7 @@ func bulkIndex(es *elasticsearch.Client, buf bytes.Buffer, indexName string, bat
 	if res.IsError() {
 		numErrors += batchSize
 		if err := json.NewDecoder(res.Body).Decode(&raw); err != nil {
-			err = errors.New(fmt.Sprintf("Failure to to parse response body: %s", err.Error()))
+			err = fmt.Errorf("failure to to parse response body: %s\n, got:%s", err.Error(), buf.String())
 			return numIndexed, numErrors, err
 		} else {
 			log.Printf("  Error: [%d] %s: %s",
@@ -107,7 +110,8 @@ func bulkIndex(es *elasticsearch.Client, buf bytes.Buffer, indexName string, bat
 		//
 	} else {
 		if err := json.NewDecoder(res.Body).Decode(&blk); err != nil {
-			log.Fatalf("Failure to to parse response body: %s", err)
+			err = fmt.Errorf("failure to to parse response body: %s\n, got:%s", err.Error(), buf.String())
+			return numIndexed, numErrors, err
 		} else {
 			for _, d := range blk.Items {
 				// ... so for any HTTP status above 201 ...
