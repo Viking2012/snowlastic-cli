@@ -22,13 +22,14 @@ func NewDB(cfg Config) (*sql.DB, error) {
 		err error
 	)
 	var c = gosnowflake.Config{
-		Account:   cfg.Account,
-		User:      cfg.User,
-		Password:  cfg.Password,
-		Database:  cfg.Database,
-		Schema:    cfg.Schema,
-		Warehouse: cfg.Warehouse,
-		Role:      cfg.Role,
+		Account:          cfg.Account,
+		User:             cfg.User,
+		Password:         cfg.Password,
+		Database:         cfg.Database,
+		Schema:           cfg.Schema,
+		Warehouse:        cfg.Warehouse,
+		Role:             cfg.Role,
+		KeepSessionAlive: true,
 	}
 	dsn, err = gosnowflake.DSN(&c)
 	if err != nil {
