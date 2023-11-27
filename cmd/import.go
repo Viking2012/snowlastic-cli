@@ -196,6 +196,14 @@ from a json file containing a list of documents.`,
 						if err != nil {
 							return err
 						}
+						// if segments are sent to the command, remove all unknown segments
+						if givenSegments != nil {
+							for k := range segmentCounts {
+								if !_import.SegmentIsGiven(segmentCounts[k], givenSegments) {
+									delete(segmentCounts, k)
+								}
+							}
+						}
 						segments[schema] = segmentCounts
 						segmentedQueries[schema] = segmentedQuery
 						for _, count := range segmentCounts {
