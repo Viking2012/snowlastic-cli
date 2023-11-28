@@ -36,7 +36,7 @@
       "Document Date":              {"type": "date"                                       },
       "Document Text":              {"type": "text"                                       },
       "Document Currency":          {"type": "keyword",	"normalizer": "documentNormalizer"},
-      "Document Value":             {"type": "number"                                     },
+      "Document Value":             {"type": "double"                                     },
       "Material Code":              {"type": "keyword",	"normalizer": "documentNormalizer"},
       "Material":                   {"type": "keyword",	"normalizer": "documentNormalizer"},
       "Material Group Code":        {"type": "keyword",	"normalizer": "documentNormalizer"},

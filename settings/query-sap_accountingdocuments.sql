@@ -68,8 +68,15 @@ FROM {{.database}}.{{.schema}}.BKPF
                        AND BSEG.LIFNR = LFA1.LIFNR
          LEFT JOIN {{.database}}.{{.schema}}.KNA1
                    ON BSEG.MANDT = KNA1.MANDT
-                       AND BSEG.LIFNR = KNA1.LIFNR
-         LEFT JOIN {{.database}}.BA_MASTERDATA.PROFITCENTERMAPPING PCM
+                       AND BSEG.KUNNR = KNA1.KUNNR
+         LEFT JOIN (SELECT DISTINCT
+                        BUKRS,PRCTR,
+                        ORG1,ORG1_CONCAT,
+                        ORG2,ORG2_CONCAT,
+                        ORG3,ORG3_CONCAT
+                    FROM {{.database}}.BA_MASTERDATA.PROFITCENTERMAPPING) PCM
                    ON BKPF.BUKRS = PCM.BUKRS
                        AND BSEG.PRCTR = PCM.PRCTR
 WHERE T003T.SPRAS = 'E'
+  AND BSEG.LIFNR != ''
+  AND BSEG.KUNNR != ''
