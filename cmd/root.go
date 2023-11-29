@@ -42,7 +42,7 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "snowlastic-cli",
-	Version: "2.1.1",
+	Version: "2.1.2",
 	Short:   "Manage, update, and administer an elasticsearch server",
 	Long: `Interact with an elasticsearch server, including indexing documents
 from a snowflake database. For example:
