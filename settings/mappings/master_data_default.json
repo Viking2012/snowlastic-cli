@@ -1,0 +1,43 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "masterDataAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "masterDataNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "record source":              {"type": "keyword",	"normalizer": "masterDataNormalizer"},
+      "database":                   {"type": "keyword",	"normalizer": "masterDataNormalizer"},
+      "icm id":                     {"type": "keyword",	"normalizer": "masterDataNormalizer"},
+      "entity title":               {"type": "text"},
+      "entity number":              {"type": "keyword", "normalizer": "masterDataNormalizer"},
+      "entity name":                {"type": "text"},
+      "document text":              {"type": "text"},
+      "address":                    {"type": "text"},
+      "address street":             {"type": "text"},
+      "address city":               {"type": "text"},
+      "address state or district":  {"type": "text"},
+      "address country":            {"type": "text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "masterDataNormalizer"}}},
+      "address zip code":           {"type": "text"},
+      "address po box":             {"type": "text"},
+      "phone number":               {"type": "text"},
+      "fax number":                 {"type": "text"},
+      "email or website":           {"type": "text"},
+      "creation date":              {"type": "date"},
+      "created by":                 {"type": "text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "masterDataNormalizer"}}}
+    }
+  }
+}

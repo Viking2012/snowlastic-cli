@@ -1,0 +1,37 @@
+SELECT DB                            AS "database"
+     , ICM_ID                        AS "document id"
+     , BSAD_BUZEI                    AS "document line number"
+     , BSAD_BUKRS                    AS "company code id"
+     , "BSAD_BUKRS_Concat"           AS "company code"
+     , NULL                          AS "document category code"
+     , NULL                          AS "document category"
+     , BSAD_BLART                    AS "document type code"
+     , "BSAD_BLART_Concat"           AS "document type"
+     , NULL                          AS "deletion indicator"
+     , BSAD_CPUDT                    AS "creation date"
+     , BKPF_USNAM                    AS "created by"
+     , 'Customer'                    AS "entity type"
+     , ICM_CUSTOMER_ID               AS "entity icm id"
+     , BSAD_KUNNR                    AS "entity number"
+     , "BSAD_KUNNR_Concat"           AS "entity"
+     , BSAD_BLDAT                    AS "document date"
+     , TRIM(
+        CONCAT_WS(
+                '\n',
+                IFNULL(CONCAT('HEADER: ', NULLIF(BKPF_BKTXT, ''), '\n'), ''),
+                IFNULL(CONCAT('ITEM: ', NULLIF(BSAD_SGTXT, ''), '\n'), '')),
+        '\n')                        AS "document text"
+     , BSAD_WAERS                    AS "document currency"
+     , FAGLFLEXA_HSL_USD             AS "document value"
+     , NULL                          AS "document quantity"
+     , NULL                          AS "material code"
+     , NULL                          AS "material"
+     , NULL                          AS "material group code"
+     , NULL                          AS "material group"
+     , FAGLFLEXA_PRCTR_ORG1          AS "organization, level 1 code"
+     , "FAGLFLEXA_PRCTR_ORG1_Concat" AS "organization, level 1"
+     , FAGLFLEXA_PRCTR_ORG2          AS "organization, level 2 code"
+     , "FAGLFLEXA_PRCTR_ORG2_Concat" AS "organization, level 2"
+     , FAGLFLEXA_PRCTR_ORG3          AS "organization, level 3 code"
+     , "FAGLFLEXA_PRCTR_ORG3_Concat" AS "organization, level 3"
+  FROM PROD_LI.COMMON_DATA.CUSTOMER_FI

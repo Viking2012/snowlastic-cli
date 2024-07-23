@@ -10,7 +10,69 @@
 # The settings directory should contain
 # the default elastic index settings ("esindex-default.json")
 # and the SQL queries used to get the underlying documents
-settingsDirectory: "path/to/settings"
+indices:
+  #  Navex
+  navex_cases:
+    path_to_query: "settings/queries/navex_cases.sql"
+    path_to_index_settings: "settings/mappings/navex_cases.json"
+
+  #  SAP Documents
+  sap_billing_docs:
+    path_to_query: "settings/queries/sap_billing_docs.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_central_customer_master:
+    path_to_query: "settings/queries/sap_central_vendor_master.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sap_central_vendor_master:
+    path_to_query: "settings/queries/sap_central_vendor_master.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sap_checks:
+    path_to_query: "settings/queries/sap_checks.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_customer_fi:
+    path_to_query: "settings/queries/sap_customer_fi.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_mm_invoices:
+    path_to_query: "settings/queries/sap_mm_invoices.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_payment_runs:
+    path_to_query: "settings/queries/sap_payment_runs.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_projects:
+    path_to_query: "settings/queries/sap_projects.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sap_purchase_orders:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_requisitions:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_sales_orders:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_vendor_fi:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+
+  #  SalesForce documents
+  sfdc_account:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sfdc_email_message:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sfdc_opportunity:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sfdc_sts_tpm_channel_appointment:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sfdc_sts_tpm_monitoring:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sfdc_user:
+    path_to_query: "path/to/query.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
 
 #     _____                     ______      __           ______              __           __  _       __
 #   / ___/____  ____ _      __/ __/ /___ _/ /_____     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____
@@ -21,7 +83,7 @@ settingsDirectory: "path/to/settings"
 # from a snowflake terminal, run
 # SELECT current_user();
 snowflakeUser: "jsmith"
-snowflakePassword:  "mypassword"
+snowflakePassword: "mypassword"
 
 #in "https://xyz.us-east-1.azure.snowflakecomputing.com/" then "xyz.us-east-1.azure"
 snowflakeAccount: "test-organization-test-account"
@@ -30,13 +92,6 @@ snowflakeAccount: "test-organization-test-account"
 snowflakeWarehouse: "myWH"
 # SELECT current_role();
 snowflakeRole: "myRole"
-# SELECT current_database();
-snowflakeDatabase: "myDB"
-snowflakeSchemas: 
-  - test_schema1
-  - test_schema2
-  - test_schema3
-  - test_schema4
 
 #      ________           __  _      _____                      __       ______              __           __  _       __
 #     / ____/ /___ ______/ /_(_)____/ ___/___  ____ ___________/ /_     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____

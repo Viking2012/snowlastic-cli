@@ -1,0 +1,91 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "caseAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "caseNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },"mappings": {
+  "properties": {
+    "action_taken":           {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "alert_level":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "branch_number":          {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "business_case":          {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_city":              {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_comments":          {"type": "nested","include_in_root": true,"properties": {
+      "followup_question_id":     {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "is_comment":               {"type": "boolean"},
+      "followup_question_text":   {"type": "text"},
+      "followup_question_date":   {"type": "date"},
+      "followup_question_asker":  {"type": "text"},
+      "answer_text":              {"type": "text"},
+      "answer_date":              {"type": "date"}}},
+    "case_country":           {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_details":           {"type": "text"},
+    "case_files":             {"type": "nested","include_in_root": true,"properties": {
+      "file_id":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "file_name":          {"type": "text"}}},
+    "case_number":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_participants":      {"type": "nested","include_in_root": true,"properties": {
+      "participant_id":           {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "participant_prefix":       {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "participant_name":         {"type": "text"},
+      "participant_hr_id":        {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "participant_relationship": {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "participant_role":         {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "outcome":                  {"type": "text"}}},
+    "case_postal_code":       {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_questions":         {"type": "nested","include_in_root": true,"properties": {
+      "followup_question_id": {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "is_comment": {"type": "boolean"},
+      "followup_question_text": {"type": "text"},
+      "followup_question_date": {"type": "date"},
+      "followup_question_asker": {"type": "keyword",	"normalizer": "caseNormalizer"},
+      "answer_text": {"type": "text"},
+      "answer_date": {"type": "date"}}},
+    "case_region":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_state_province":    {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_status":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "case_type":              {"type": "text"},
+    "closure_date":           {"type": "date"},
+    "disposition":            {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "division":               {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "due_date":               {"type": "date"},
+    "email_address":          {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "government_nexus":       {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "incident_date":          {"type": "date"},
+    "open_date":              {"type": "date"},
+    "primary_issue":          {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "primary_issue_layer1":   {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "primary_issue_layer2":   {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "primary_issue_layer3":   {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "primary_outcome":        {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "reported_date":          {"type": "date"},
+    "reporter_is_employee":   {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "reporter_name_first":    {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "reporter_name_last":     {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "secondary_issue":        {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "secondary_issue_layer1": {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "secondary_issue_layer2": {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "secondary_issue_layer3": {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "secondary_outcome":      {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "summary":                {"type": "text"},
+    "tertiary_issue":         {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "tertiary_issue_layer1":  {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "tertiary_issue_layer2":  {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "tertiary_issue_layer3":  {"type": "keyword",	"normalizer": "caseNormalizer"},
+    "tertiary_outcome":       {"type": "keyword",	"normalizer": "caseNormalizer"}
+  }
+}
+}

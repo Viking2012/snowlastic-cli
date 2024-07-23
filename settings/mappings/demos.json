@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "demoAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "demoNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },"mappings": {
+  "properties": {
+    "Search Term":  {"type": "keyword",	"normalizer": "demoNormalizer"},
+    "Value":        {"type": "text"},
+    "Should Match": {"type": "boolean"}
+  }
+}
+}
