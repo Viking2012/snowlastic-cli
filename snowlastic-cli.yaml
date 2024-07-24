@@ -42,36 +42,36 @@ indices:
     path_to_query: "settings/queries/sap_projects.sql"
     path_to_index_settings: "settings/mappings/operational_default.json"
   sap_purchase_orders:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sap_purchase_orders.sql"
     path_to_index_settings: "settings/mappings/transaction_default.json"
   sap_requisitions:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sap_requisitions.sql"
     path_to_index_settings: "settings/mappings/transaction_default.json"
   sap_sales_orders:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sap_sales_orders.sql"
     path_to_index_settings: "settings/mappings/transaction_default.json"
   sap_vendor_fi:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sap_vendor_fi.sql"
     path_to_index_settings: "settings/mappings/transaction_default.json"
 
   #  SalesForce documents
   sfdc_account:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sfdc_account.sql"
     path_to_index_settings: "settings/mappings/master_data_default.json"
   sfdc_email_message:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "path/to/settings/queries/sfdc_email_message.sql"
     path_to_index_settings: "settings/mappings/operational_default.json"
   sfdc_opportunity:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sfdc_opportunity.sql"
     path_to_index_settings: "settings/mappings/operational_default.json"
-  sfdc_sts_tpm_channel_appointment:
-    path_to_query: "path/to/query.sql"
-    path_to_index_settings: "settings/mappings/master_data_default.json"
-  sfdc_sts_tpm_monitoring:
-    path_to_query: "path/to/query.sql"
-    path_to_index_settings: "settings/mappings/operational_default.json"
+  #  sfdc_sts_tpm_channel_appointment:
+  #    path_to_query: "path/to/query.sql"
+  #    path_to_index_settings: "settings/mappings/master_data_default.json"
+  #  sfdc_sts_tpm_monitoring:
+  #    path_to_query: "path/to/query.sql"
+  #    path_to_index_settings: "settings/mappings/operational_default.json"
   sfdc_user:
-    path_to_query: "path/to/query.sql"
+    path_to_query: "settings/queries/sfdc_user.sql"
     path_to_index_settings: "settings/mappings/master_data_default.json"
 
 #     _____                     ______      __           ______              __           __  _       __

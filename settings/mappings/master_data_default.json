@@ -37,7 +37,8 @@
       "fax number":                 {"type": "text"},
       "email or website":           {"type": "text"},
       "creation date":              {"type": "date"},
-      "created by":                 {"type": "text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "masterDataNormalizer"}}}
+      "created by":                 {"type": "text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "masterDataNormalizer"}}},
+      "document date":              {"type": "date"}
     }
   }
 }

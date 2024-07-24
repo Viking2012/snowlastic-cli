@@ -1,36 +1,34 @@
-SELECT DB                     AS "database"
-     , ICM_VENDOR_ID          AS "document id"
-     , NULL                   AS "document line number"
-     , NULL                   AS "company code id"
-     , NULL                   AS "company code"
-     , NULL                   AS "document category code"
-     , 'Master Record'        AS "document category"
-     , 'LFA1'                 AS "document type code"
-     , 'Vendor Master Record' AS "document type"
-     , NULL                   AS "deletion indicator"
-     , LFA1_ERDAT             AS "creation date"
-     , LFA1_ERNAM             AS "created by"
-     , 'Vendor'               AS "entity type"
-     , ICM_VENDOR_ID          AS "entity icm id"
-     , LFA1_LIFNR             AS "entity number"
-     , "LFA1_LIFNR_Concat"    AS "entity"
-     , CURRENT_DATE()         AS "document date"
-     , CONCAT_WS(' ',
-                 LFA1_NAME1,
-                 LFA1_NAME2,
-                 LFA1_NAME3,
-                 LFA1_NAME4)  AS "document text"
-     , NULL                   AS "document currency"
-     , NULL                   AS "document value"
-     , NULL                   AS "document quantity"
-     , NULL                   AS "material code"
-     , NULL                   AS "material"
-     , NULL                   AS "material group code"
-     , NULL                   AS "material group"
-     , NULL                   AS "organization, level 1 code"
-     , NULL                   AS "organization, level 1"
-     , NULL                   AS "organization, level 2 code"
-     , NULL                   AS "organization, level 2"
-     , NULL                   AS "organization, level 3 code"
-     , NULL                   AS "organization, level 3"
+SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
+     , DB                                    AS "database"
+     , ICM_ID                                AS "icm id"
+     , 'Customer'                            AS "entity title"
+     , LFA1_LIFNR                            AS "entity number"
+     , RTRIM(CONCAT_WS(' ',
+                       LFA1_NAME1,
+                       LFA1_NAME2,
+                       LFA1_NAME3,
+                       LFA1_NAME4))          AS "entity name"
+     , RTRIM(CONCAT_WS(' ',
+                       LFA1_NAME1,
+                       LFA1_NAME2,
+                       LFA1_NAME3,
+                       LFA1_NAME4))          AS "document text"
+     , RTRIM(CONCAT_WS('; ',
+                       LFA1_STRAS,
+                       LFA1_ORT01,
+                       LFA1_REGIO,
+                       LFA1_LAND1,
+                       LFA1_PSTLZ), '; ')    AS "address"
+     , LFA1_STRAS                            AS "address street"
+     , LFA1_ORT01                            AS "address city"
+     , LFA1_REGIO                            AS "address state or district"
+     , "LFA1_LAND1_Concat"                   AS "address country"
+     , LFA1_PSTLZ                            AS "address zip code"
+     , NULL                                  AS "address po box"
+     , LFA1_TELF1                            AS "phone number"
+     , LFA1_TELFX                            AS "fax number"
+     , NULL                                  AS "email"
+     , LFA1_ERDAT                            AS "creation date"
+     , LFA1_ERNAM                            AS "created by"
+     , CURRENT_DATE()                        AS "document date"
   FROM PROD_LI.COMMON_DATA.CENTRAL_VENDOR_MASTER
