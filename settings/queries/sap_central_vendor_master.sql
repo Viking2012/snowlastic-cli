@@ -1,6 +1,6 @@
 SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
      , DB                                    AS "database"
-     , ICM_ID                                AS "icm id"
+     , ICM_VENDOR_ID                                AS "icm id"
      , 'Customer'                            AS "entity title"
      , LFA1_LIFNR                            AS "entity number"
      , RTRIM(CONCAT_WS(' ',
@@ -12,7 +12,8 @@ SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
                        LFA1_NAME1,
                        LFA1_NAME2,
                        LFA1_NAME3,
-                       LFA1_NAME4))          AS "document text"
+                       LFA1_NAME4,
+                       LFA1_SORTL))          AS "document text"
      , RTRIM(CONCAT_WS('; ',
                        LFA1_STRAS,
                        LFA1_ORT01,
