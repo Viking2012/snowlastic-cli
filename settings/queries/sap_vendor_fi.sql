@@ -1,7 +1,8 @@
 SELECT 'PROD_LI.' ||
        'COMMON_DATA.' ||
-       'VENDOR_FI'       AS "record source"
+       'VENDOR_FI'                   AS "record source"
      , DB                            AS "database"
+     , ICM_ID || '|' || BSAK_BUZEI   AS "id"
      , ICM_ID                        AS "icm id"
      , BSAK_BUZEI                    AS "document line number"
      , ICM_VENDOR_ID                 AS "entity icm id"

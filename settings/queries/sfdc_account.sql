@@ -2,6 +2,7 @@ SELECT 'PROD_UDM_PERSISTENT.' ||
        'PERSISTENT_SFDC.' ||
        'ACCOUNT'                                            AS "record source"
      , 'SalesForce'                                         AS "database"
+     , ACCOUNT.ID                                           AS "id"
      , ACCOUNT.ID                                           AS "icm id"
      , ACCOUNT.SITE                                         AS "entity title"
      , ACCOUNT.ID                                           AS "entity number"

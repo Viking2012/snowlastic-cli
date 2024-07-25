@@ -1,5 +1,6 @@
 SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
      , DB                                    AS "database"
+     , ICM_ID                                AS "id"
      , ICM_ID                                AS "icm id"
      , 'Customer'                            AS "entity title"
      , KNA1_KUNNR                            AS "entity number"

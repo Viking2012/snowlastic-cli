@@ -7,6 +7,7 @@ SELECT 'COMMON_DATA.CHECKS'  AS "record source"
                  PAYR_HKTID,
                  PAYR_RZAWE,
                  PAYR_CHECT) AS "icm id"
+     , "icm id"              as "id"
      , NULL                  AS "document line number"
      , CONCAT_WS('|',
                  DB,
@@ -59,6 +60,7 @@ SELECT 'COMMON_DATA.CHECKS'  AS "record source"
                  PAYR_HKTID,
                  PAYR_RZAWE,
                  PAYR_CHECT) AS "icm id"
+     , "icm id"              as "id"
      , NULL                  AS "document line number"
      , CONCAT_WS('|',
                  DB,

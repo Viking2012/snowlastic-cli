@@ -1,5 +1,6 @@
 SELECT 'COMMON_DATA.MM_INVOICES'       AS "record source"
      , MM_INVOICES.DB                  AS "database"
+     , ICM_ID || '|' || RSEG_BUZEI     AS "id"
      , ICM_ID                          AS "icm id"
      , RSEG_BUZEI                      AS "document line number"
      , MM_INVOICES.ICM_VENDOR_ID       AS "entity icm id"

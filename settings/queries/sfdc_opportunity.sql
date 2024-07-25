@@ -1,5 +1,6 @@
 SELECT 'PROD_UDM_PERSISTENT.PERSISTENT_SFDC.OPPORTUNITY' AS "record source"
      , 'SalesForce'                                      AS "database"
+     , OPP.ID                                            AS "id"
      , OPP.ID                                            AS "icm id"
      , 'Opportunity'                                     AS "document type"
      , TO_DATE(OPP.CREATEDDATE)                          AS "document date"

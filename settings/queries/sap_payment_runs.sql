@@ -1,5 +1,6 @@
 SELECT 'COMMON_DATA.PAYMENT_RUNS'    AS "record source"
      , DB                            AS "database"
+     , ICM_ID                        AS "id"
      , ICM_ID                        AS "icm id"
      , NULL                          AS "document line number"
      , ICM_VENDOR_ID                 AS "entity icm id"

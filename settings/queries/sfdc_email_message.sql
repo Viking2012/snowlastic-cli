@@ -1,5 +1,6 @@
 SELECT 'PROD_UDM_PERSISTENT.PERSISTENT_SFDC.EMAILMESSAGE'         AS "record source"
      , 'SalesForce'                                               AS "database"
+     , EMAILMESSAGE.ID                                            AS "id"
      , EMAILMESSAGE.ID                                            AS "icm id"
      , 'Email Message'                                            AS "document type"
      , IFNULL(EMAILMESSAGE.MESSAGEDATE, EMAILMESSAGE.CREATEDDATE) AS "document date"

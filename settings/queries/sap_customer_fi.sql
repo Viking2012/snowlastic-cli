@@ -1,5 +1,6 @@
 SELECT 'COMMON_DATA.CUSTOMER_FI'     AS "record source"
      , DB                            AS "database"
+     , ICM_ID || '|' || BSAD_BUZEI   AS "id"
      , ICM_ID                        AS "icm id"
      , BSAD_BUZEI                    AS "document line number"
      , ICM_CUSTOMER_ID               AS "entity icm id"
