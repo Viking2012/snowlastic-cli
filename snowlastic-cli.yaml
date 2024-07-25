@@ -7,10 +7,36 @@
 # appropriate value. When using environment variables, you should remove
 # or comment out the entry in this file to remove the potential for conflicts.
 
-# The settings directory should contain
-# the default elastic index settings ("esindex-default.json")
-# and the SQL queries used to get the underlying documents
-indices:
+# The elasticIndices should contain a list of all indices which are/will be
+# present in the elasticsearch platform. Each entry in elasticIndices should be
+# in the following format:
+# index_name:
+#   path_to_query: "path/to/location/of/query.sql
+#   path_to_index_settings: "path/to/location/of/settings.json"
+
+# In the above format, 'index_name' should be in snake_case and will become
+# the name of the index created in the elasticsearch platform. Several examples
+# for Navex Cases, SAP transactions, SAP master records, and documents from
+# SalesForce are provided as standard examples below.
+
+# The path_to_index_settings variable should point to a JSON file containing
+# an explicit elasticsearch mapping. These can be reused, but should be complete
+# settings files (not just a partial list of properties/fields) - in other words
+# it should include normalizers, analyzers, and mappings. The current layout of
+# of these settings considers that there are three major types of documents which
+# are expected to be contained within the database: transactions, master data records,
+# and operational documents (i.e. "miscellaneous" documents). Feel free to create your
+# own mappings files, but note that keeping field names and type consistent with
+# the current layout is advised.
+
+# The path_to_query variable should point to a SQL file which would be used to
+# collect records for the index. These queries should return all fields used in
+# the related mapping for the index, using NULL values where necessary. Note that
+# names of the return fields should be in snake_case and match exactly those fields
+# which are present in the related mapping. Finally, this query is generally "wrapped"
+# when used internally (usually in a CTE) to facilitate filtering and collection of
+# import progression metadata - please keep this in mind when generating new queries.
+elasticIndices:
   #  Navex
   navex_cases:
     path_to_query: "settings/queries/navex_cases.sql"
