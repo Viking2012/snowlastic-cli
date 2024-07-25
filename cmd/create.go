@@ -36,9 +36,7 @@ import (
 )
 
 var (
-	settingsDir          string
-	defaultIndexSettings string
-	settings             string
+	settings string
 )
 
 var indexConfigurations = make(map[string]map[string]string)
