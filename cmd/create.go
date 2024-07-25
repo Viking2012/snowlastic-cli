@@ -33,7 +33,6 @@ import (
 	"github.com/spf13/viper"
 	"log"
 	"os"
-	"path"
 )
 
 var (
@@ -42,7 +41,8 @@ var (
 	settings             string
 )
 
-var knownIndices map[string]string
+var indexConfigurations = make(map[string]map[string]string)
+var knownIndices = make(map[string]string)
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
@@ -52,39 +52,17 @@ var createCmd = &cobra.Command{
 Example/Multiple Indices : create sap_checks sap_purchaseorders navex_cases demos 
 Example/Explicit Settings: create demos --settings ./settings/esindex-demos.json
 
-Indices created without the --settings flag will be created with the elasticsearch servers default settings.
-If the --settings flag is provided with multiple index names, this file will be used to create each index.
-The following ICM Entities have pre-defined settings which will override the server defaults, even without a --settings flag being provided:
-  ICM Entity                          | Index name	   			|	Example command
------------------------------------------------------------------------------------------
-- Accounting Documents 					sap_accountingdocuments		create index sap_accountingdocuments
-- Checks 								sap_checks				  	create index sap_checks
-- Invoices 								sap_invoices				create index sap_invoices
-- Purchase Orders 						sap_purchaseorders		  	create index sap_purchaseorders
-- Sales Orders 							sap_salesorders				create index sap_salesorders
-
-- Navex cases 							navex_cases				  	create index navex_cases
-
-- Demonstrations and keyword testing 	demos				  		create index demos`,
+Indices created without the --settings flag will be created with the individual settings defined in the 
+snowlastic-cli.yaml configuration file. If the --settings flag is provided with multiple index names, 
+this file will be used to create each index.
+Indices not defined in the snowlastic-cli.yaml configuration file and are created without a --settings flag will
+be created without any explicit mapping (elasticsearch defaults to its own internal typing).`,
 	//Args: cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		var givenIndex = args[0]
 		// initialize primary variables
-		settingsDir = viper.GetString("settingsDirectory")
-		defaultIndexSettings = path.Join(viper.GetString("settingsDirectory"), "esindex-default.json")
-		knownIndices = map[string]string{
-			"sap_accountingdocuments": defaultIndexSettings,
-			"sap_checks":              defaultIndexSettings,
-			"sap_invoices":            defaultIndexSettings,
-			"sap_purchaseorders":      defaultIndexSettings,
-			"sap_salesorders":         defaultIndexSettings,
-			"navex_cases":             path.Join(settingsDir, "esindex-navex_cases.json"),
-			"demos":                   path.Join(settingsDir, "esindex-demos.json"),
-			"test":                    defaultIndexSettings,
-		}
-
-		if !isKnownIndex(knownIndices, givenIndex) && settings == "" {
-			log.Printf("%s was not a known default index and will be created with dynamic mapping (no settings)", givenIndex)
+		indexConfigurations = viper.Get("elasticIndices").(map[string]map[string]string)
+		for indexName, indexPaths := range indexConfigurations {
+			knownIndices[indexName] = indexPaths["path_to_index_settings"]
 		}
 		return
 	},
@@ -101,6 +79,11 @@ The following ICM Entities have pre-defined settings which will override the ser
 		c, err = generateDefaultElasticClient()
 		if err != nil {
 			return err
+		}
+		if len(args) == 0 {
+			for indexName, _ := range knownIndices {
+				args = append(args, indexName)
+			}
 		}
 
 		for i := range args {
@@ -120,7 +103,7 @@ The following ICM Entities have pre-defined settings which will override the ser
 					return err
 				}
 			} else {
-				log.Printf("%s was not a known default index and will be created with dynamic mapping (no settings)", givenIndex)
+				log.Printf("%s was not a known index and will be created with dynamic mapping (no settings)", givenIndex)
 			}
 
 			err = createIndex(c, b, givenIndex)
