@@ -24,6 +24,7 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"log"
@@ -88,9 +89,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "set verbose output")
 	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
-	rootCmd.PersistentFlags().String("settingsDirectory", "", `The settings directory containing elasticsearch settings and document SQL queries`)
-	_ = viper.BindPFlag("settingsDirectory", rootCmd.PersistentFlags().Lookup("settingsDirectory"))
-
 	// Snowflake flags
 	rootCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username`)
 	_ = viper.BindPFlag("snowflakeUser", rootCmd.PersistentFlags().Lookup("snowflakeUser"))
@@ -106,12 +104,6 @@ func init() {
 
 	rootCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role`)
 	_ = viper.BindPFlag("snowflakeRole", rootCmd.PersistentFlags().Lookup("snowflakeRole"))
-
-	rootCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database`)
-	_ = viper.BindPFlag("snowflakeDatabase", rootCmd.PersistentFlags().Lookup("snowflakeDatabase"))
-
-	rootCmd.PersistentFlags().StringSlice("snowflakeSchemas", []string{}, "A comma seperated list of relevant schemas")
-	_ = viper.BindPFlag("snowflakeSchemas", rootCmd.PersistentFlags().Lookup("snowflakeSchemas"))
 
 	// Elastic flags
 	rootCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch node")
@@ -154,6 +146,14 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+
+	var indexMap map[string]map[string]string
+	//indexMap, err := convertIndices(rootCmd.PersistentFlags().Lookup("elasticIndices"))
+	err := viper.UnmarshalKey("elasticIndices", &indexMap)
+	if err != nil {
+		panic(err)
+	}
+	viper.Set("elasticIndices", indexMap)
 }
 
 func printConfig() {
@@ -173,8 +173,6 @@ func printConfig() {
 	fmt.Println("-----  current golastic-cli configuration  -----")
 	fmt.Println("------------------------------------------------")
 	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "settingsDirectory", viper.GetString("settingsDirectory"))
-	fmt.Println()
 	fmt.Printf("%-21s: %t\n", "verbose logging", viper.GetBool("verbose"))
 	if viper.GetBool("verbose") {
 		log.Println("got verbose output")
@@ -185,15 +183,6 @@ func printConfig() {
 	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
 	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
 	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
-	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
-	fmt.Printf("%-21s:", "snowflakeSchemas")
-	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
-		if i == 0 {
-			fmt.Println(" -", schema)
-		} else {
-			fmt.Printf("%24s %s\n", "-", schema)
-		}
-	}
 	fmt.Println()
 	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
 	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
@@ -202,6 +191,14 @@ func printConfig() {
 	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
 	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
 	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
+	fmt.Println()
+
+	for k, v := range viper.Get("elasticIndices").(map[string]map[string]string) {
+		fmt.Printf("%24s: %24s\n", k, "")
+		for k2, v2 := range v {
+			fmt.Printf("%24s %-24s:%s\n", "", k2, v2)
+		}
+	}
 }
 
 func setLogLevel() {
@@ -263,4 +260,32 @@ func getProxy() string {
 		proxy = fmt.Sprintf(`http://%v`, proxy)
 	}
 	return proxy
+}
+
+func convertIndices(a any) (map[string]map[string]string, error) {
+	var (
+		tmpMap   = make(map[string]any)
+		indexMap = make(map[string]map[string]string)
+		ok       bool
+	)
+	if tmpMap, ok = a.(map[string]any); !ok {
+		return nil, errors.New("could not load elasticIndices into tmpMap")
+		//panic("could not load elasticIndices into tmpMap")
+	}
+	for k, v := range tmpMap {
+		var tmp = make(map[string]any)
+		var tmp2 = make(map[string]string)
+		if tmp, ok = v.(map[string]any); !ok {
+			return nil, errors.New(fmt.Sprintf("could not load elasticIndices into tmp '%s' (type %T)", k, v))
+			//panic(fmt.Sprintf("could not load elasticIndices into tmp '%s' (type %T)", k, v))
+		}
+		for k2, v2 := range tmp {
+			if tmp2[k2], ok = v2.(string); !ok {
+				return nil, errors.New(fmt.Sprintf("could not load elasticIndices into tmp['%s']['%s']%v (type %T)", k, k2, v, v))
+				//panic(fmt.Sprintf("could not load elasticIndices into tmp['%s']['%s']%v (type %T)", k, k2, v, v))
+			}
+		}
+		indexMap[k] = tmp2
+	}
+	return indexMap, nil
 }
