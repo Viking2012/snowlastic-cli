@@ -49,7 +49,7 @@ elasticIndices:
     path_to_query: "settings/queries/sap_billing_docs.sql"
     path_to_index_settings: "settings/mappings/transaction_default.json"
   sap_central_customer_master:
-    path_to_query: "settings/queries/sap_central_vendor_master.sql"
+    path_to_query: "settings/queries/sap_central_customer_master.sql"
     path_to_index_settings: "settings/mappings/master_data_default.json"
   sap_central_vendor_master:
     path_to_query: "settings/queries/sap_central_vendor_master.sql"
