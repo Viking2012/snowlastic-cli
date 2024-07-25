@@ -33,7 +33,9 @@
 # collect records for the index. These queries should return all fields used in
 # the related mapping for the index, using NULL values where necessary. Note that
 # names of the return fields should be in snake_case and match exactly those fields
-# which are present in the related mapping. Finally, this query is generally "wrapped"
+# which are present in the related mapping. There most also be at least one additional
+# field included in each query which is not mapped in the settings file: "id". This
+# field must uniquely identify each record. Finally, this query is generally "wrapped"
 # when used internally (usually in a CTE) to facilitate filtering and collection of
 # import progression metadata - please keep this in mind when generating new queries.
 elasticIndices:
