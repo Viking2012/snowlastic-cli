@@ -7,10 +7,100 @@
 # appropriate value. When using environment variables, you should remove
 # or comment out the entry in this file to remove the potential for conflicts.
 
-# The settings directory should contain
-# the default elastic index settings ("esindex-default.json")
-# and the SQL queries used to get the underlying documents
-settingsDirectory: "path/to/settings"
+# The elasticIndices should contain a list of all indices which are/will be
+# present in the elasticsearch platform. Each entry in elasticIndices should be
+# in the following format:
+# index_name:
+#   path_to_query: "path/to/location/of/query.sql
+#   path_to_index_settings: "path/to/location/of/settings.json"
+
+# In the above format, 'index_name' should be in snake_case and will become
+# the name of the index created in the elasticsearch platform. Several examples
+# for Navex Cases, SAP transactions, SAP master records, and documents from
+# SalesForce are provided as standard examples below.
+
+# The path_to_index_settings variable should point to a JSON file containing
+# an explicit elasticsearch mapping. These can be reused, but should be complete
+# settings files (not just a partial list of properties/fields) - in other words
+# it should include normalizers, analyzers, and mappings. The current layout of
+# of these settings considers that there are three major types of documents which
+# are expected to be contained within the database: transactions, master data records,
+# and operational documents (i.e. "miscellaneous" documents). Feel free to create your
+# own mappings files, but note that keeping field names and type consistent with
+# the current layout is advised.
+
+# The path_to_query variable should point to a SQL file which would be used to
+# collect records for the index. These queries should return all fields used in
+# the related mapping for the index, using NULL values where necessary. Note that
+# names of the return fields should be in snake_case and match exactly those fields
+# which are present in the related mapping. There most also be at least one additional
+# field included in each query which is not mapped in the settings file: "id". This
+# field must uniquely identify each record. Finally, this query is generally "wrapped"
+# when used internally (usually in a CTE) to facilitate filtering and collection of
+# import progression metadata - please keep this in mind when generating new queries.
+elasticIndices:
+  #  Navex
+  navex_cases:
+    path_to_query: "settings/queries/navex_cases.sql"
+    path_to_index_settings: "settings/mappings/navex_cases.json"
+
+  #  SAP Documents
+  sap_billing_docs:
+    path_to_query: "settings/queries/sap_billing_docs.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_central_customer_master:
+    path_to_query: "settings/queries/sap_central_customer_master.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sap_central_vendor_master:
+    path_to_query: "settings/queries/sap_central_vendor_master.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sap_checks:
+    path_to_query: "settings/queries/sap_checks.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_customer_fi:
+    path_to_query: "settings/queries/sap_customer_fi.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_mm_invoices:
+    path_to_query: "settings/queries/sap_mm_invoices.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_payment_runs:
+    path_to_query: "settings/queries/sap_payment_runs.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_projects:
+    path_to_query: "settings/queries/sap_projects.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sap_purchase_orders:
+    path_to_query: "settings/queries/sap_purchase_orders.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_requisitions:
+    path_to_query: "settings/queries/sap_requisitions.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_sales_orders:
+    path_to_query: "settings/queries/sap_sales_orders.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+  sap_vendor_fi:
+    path_to_query: "settings/queries/sap_vendor_fi.sql"
+    path_to_index_settings: "settings/mappings/transaction_default.json"
+
+  #  SalesForce documents
+  sfdc_account:
+    path_to_query: "settings/queries/sfdc_account.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
+  sfdc_email_message:
+    path_to_query: "path/to/settings/queries/sfdc_email_message.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  sfdc_opportunity:
+    path_to_query: "settings/queries/sfdc_opportunity.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
+  #  sfdc_sts_tpm_channel_appointment:
+  #    path_to_query: "path/to/query.sql"
+  #    path_to_index_settings: "settings/mappings/master_data_default.json"
+  #  sfdc_sts_tpm_monitoring:
+  #    path_to_query: "path/to/query.sql"
+  #    path_to_index_settings: "settings/mappings/operational_default.json"
+  sfdc_user:
+    path_to_query: "settings/queries/sfdc_user.sql"
+    path_to_index_settings: "settings/mappings/master_data_default.json"
 
 #     _____                     ______      __           ______              __           __  _       __
 #   / ___/____  ____ _      __/ __/ /___ _/ /_____     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____
@@ -21,7 +111,7 @@ settingsDirectory: "path/to/settings"
 # from a snowflake terminal, run
 # SELECT current_user();
 snowflakeUser: "jsmith"
-snowflakePassword:  "mypassword"
+snowflakePassword: "mypassword"
 
 #in "https://xyz.us-east-1.azure.snowflakecomputing.com/" then "xyz.us-east-1.azure"
 snowflakeAccount: "test-organization-test-account"
@@ -30,13 +120,6 @@ snowflakeAccount: "test-organization-test-account"
 snowflakeWarehouse: "myWH"
 # SELECT current_role();
 snowflakeRole: "myRole"
-# SELECT current_database();
-snowflakeDatabase: "myDB"
-snowflakeSchemas: 
-  - test_schema1
-  - test_schema2
-  - test_schema3
-  - test_schema4
 
 #      ________           __  _      _____                      __       ______              __           __  _       __
 #     / ____/ /___ ______/ /_(_)____/ ___/___  ____ ___________/ /_     / ____/_______  ____/ /__  ____  / /_(_)___ _/ /____

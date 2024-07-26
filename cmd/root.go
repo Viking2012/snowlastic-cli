@@ -42,7 +42,7 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "snowlastic-cli",
-	Version: "2.1.2",
+	Version: "3.0.0",
 	Short:   "Manage, update, and administer an elasticsearch server",
 	Long: `Interact with an elasticsearch server, including indexing documents
 from a snowflake database. For example:
@@ -88,9 +88,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "set verbose output")
 	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 
-	rootCmd.PersistentFlags().String("settingsDirectory", "", `The settings directory containing elasticsearch settings and document SQL queries`)
-	_ = viper.BindPFlag("settingsDirectory", rootCmd.PersistentFlags().Lookup("settingsDirectory"))
-
 	// Snowflake flags
 	rootCmd.PersistentFlags().String("snowflakeUser", "", `Snowflake Username`)
 	_ = viper.BindPFlag("snowflakeUser", rootCmd.PersistentFlags().Lookup("snowflakeUser"))
@@ -106,12 +103,6 @@ func init() {
 
 	rootCmd.PersistentFlags().String("snowflakeRole", "", `Snowflake User role`)
 	_ = viper.BindPFlag("snowflakeRole", rootCmd.PersistentFlags().Lookup("snowflakeRole"))
-
-	rootCmd.PersistentFlags().String("snowflakeDatabase", "", `Snowflake Database`)
-	_ = viper.BindPFlag("snowflakeDatabase", rootCmd.PersistentFlags().Lookup("snowflakeDatabase"))
-
-	rootCmd.PersistentFlags().StringSlice("snowflakeSchemas", []string{}, "A comma seperated list of relevant schemas")
-	_ = viper.BindPFlag("snowflakeSchemas", rootCmd.PersistentFlags().Lookup("snowflakeSchemas"))
 
 	// Elastic flags
 	rootCmd.PersistentFlags().String("elasticUrl", "localhost", "URL of the elasticsearch node")
@@ -154,6 +145,14 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		_, _ = fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+
+	var indexMap map[string]map[string]string
+	//indexMap, err := convertIndices(rootCmd.PersistentFlags().Lookup("elasticIndices"))
+	err := viper.UnmarshalKey("elasticIndices", &indexMap)
+	if err != nil {
+		panic(err)
+	}
+	viper.Set("elasticIndices", indexMap)
 }
 
 func printConfig() {
@@ -173,8 +172,6 @@ func printConfig() {
 	fmt.Println("-----  current golastic-cli configuration  -----")
 	fmt.Println("------------------------------------------------")
 	fmt.Println()
-	fmt.Printf("%-21s: %s\n", "settingsDirectory", viper.GetString("settingsDirectory"))
-	fmt.Println()
 	fmt.Printf("%-21s: %t\n", "verbose logging", viper.GetBool("verbose"))
 	if viper.GetBool("verbose") {
 		log.Println("got verbose output")
@@ -185,15 +182,6 @@ func printConfig() {
 	fmt.Printf("%-21s: %s\n", "snowflakeAccount", viper.GetString("snowflakeAccount"))
 	fmt.Printf("%-21s: %s\n", "snowflakeWarehouse", viper.GetString("snowflakeWarehouse"))
 	fmt.Printf("%-21s: %s\n", "snowflakeRole", viper.GetString("snowflakeRole"))
-	fmt.Printf("%-21s: %s\n", "snowflakeDatabase", viper.GetString("snowflakeDatabase"))
-	fmt.Printf("%-21s:", "snowflakeSchemas")
-	for i, schema := range viper.GetStringSlice("snowflakeSchemas") {
-		if i == 0 {
-			fmt.Println(" -", schema)
-		} else {
-			fmt.Printf("%24s %s\n", "-", schema)
-		}
-	}
 	fmt.Println()
 	fmt.Printf("%-21s: %s\n", "elasticUrl", viper.GetString("elasticUrl"))
 	fmt.Printf("%-21s: %d\n", "elasticPort", viper.GetInt("elasticPort"))
@@ -202,6 +190,14 @@ func printConfig() {
 	fmt.Printf("%-21s: %s\n", "elasticApiKey", viper.GetString("elasticApiKey"))
 	fmt.Printf("%-21s: %s\n", "elasticBearerToken", viper.GetString("elasticBearerToken"))
 	fmt.Printf("%-21s: %s\n", "elasticCaCertPath", viper.GetString("elasticCaCertPath"))
+	fmt.Println()
+
+	for k, v := range viper.Get("elasticIndices").(map[string]map[string]string) {
+		fmt.Printf("%24s: %24s\n", k, "")
+		for k2, v2 := range v {
+			fmt.Printf("%24s %-24s:%s\n", "", k2, v2)
+		}
+	}
 }
 
 func setLogLevel() {

@@ -36,7 +36,6 @@ import (
 	"github.com/vbauerster/mpb/v8"
 	"golang.org/x/sync/errgroup"
 	"log"
-	"path"
 	_import "snowlastic-cli/cmd/import"
 	"snowlastic-cli/pkg/es"
 	types "snowlastic-cli/pkg/orm"
@@ -48,29 +47,51 @@ import (
 )
 
 var (
-	by            string
-	givenSegments []string
+	by             string
+	givenSegments  []string
+	elasticIndices = make(map[string]map[string]string)
+	indices        = make(map[string]string)
+	queries        = make(map[string]string)
 )
 
 // importCmd represents the import command
 var importCmd = &cobra.Command{
-	Use:   `import index_name --id ID [--from ./path/to/query-index_name.sql] [--by Database [--in Value1 --in "Value 2"  --in ...]]`,
+	Use:   `import index_name [--id "id"] [--from "./path/to/query-index_name.sql"] [--by "database" [--in "Value1" --in "Value 2"  --in ...]]`,
 	Short: "Import documents into an elasticsearch index",
 	Long: `A document is a representation of any kind of record. This tool allows
 for importing data from pre-defined sources (such as snowflake tables/views) or 
 from a json file containing a list of documents.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+		var ok bool
+		var argFound bool = false
 		setLogLevel()
 		if cmd.Flags().Lookup("in").Changed && !cmd.Flags().Lookup("by").Changed {
 			return errors.New("you must specify a 'by' field in order to use the 'in' argument")
 		}
 		log.Println("setting proxies")
-
-		return setProxy()
+		err = setProxy()
+		if err != nil {
+			return err
+		}
+		elasticIndices, ok = viper.Get("elasticIndices").(map[string]map[string]string)
+		if !ok {
+			return errors.New("elastic indices config is missing")
+		}
+		for k, conf := range elasticIndices {
+			indices[k] = conf["path_to_index_settings"]
+			queries[k] = conf["path_to_query"]
+			if args[0] == k {
+				argFound = true
+			}
+		}
+		if !argFound && viper.GetString("from") == "" {
+			return errors.New(fmt.Sprintf("index %s is not in config and requires a source query provided in the --from flag", args[0]))
+		}
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// arguments?
-		//var batchSize = 10
 		var indexName = args[0]
 
 		// initialization
@@ -131,35 +152,21 @@ from a json file containing a list of documents.`,
 			{
 				var (
 					segmenter        *string
-					schemas          = viper.GetStringSlice("snowflakeSchemas")
 					segments         = make(map[string]map[any]int64)
 					segmentedQueries = make(map[string]string)
-					tmpl             *template.Template
 
 					db *sql.DB
 				)
-				switch {
-				// as additional, non-sap sources get added,
-				case indexName == "navex_cases":
-					schemas = []string{"SQL_NAVEX"}
-				default:
-					sort.Strings(schemas)
-				}
 				if by != "" {
 					segmenter = &by
 				} else {
 					segmenter = nil
 				}
-				tmpl, err := template.ParseFiles(path.Join(
-					viper.GetString("settingsDirectory"),
-					fmt.Sprintf("query-%s.sql", indexName),
-				))
 
 				log.Println("connecting to database...")
 				db, err = snowflake.NewDB(snowflake.Config{
 					Account:   viper.GetString("snowflakeAccount"),
 					Warehouse: viper.GetString("snowflakeWarehouse"),
-					Database:  viper.GetString("snowflakeDatabase"),
 					User:      viper.GetString("snowflakeUser"),
 					Password:  viper.GetString("snowflakePassword"),
 					Role:      viper.GetString("snowflakeRole"),
@@ -169,10 +176,10 @@ from a json file containing a list of documents.`,
 					return err
 				}
 
-				log.Printf("determining segments for each schema (%d)...\n", len(schemas))
+				log.Printf("determining segments for each index (%d)...\n", len(args))
 				var bar = _import.AddBarMomentary(
 					progress,
-					int64(len(schemas)),
+					int64(len(args)),
 					viper.GetString("snowflakeDatabase"),
 					by,
 				)
@@ -186,15 +193,26 @@ from a json file containing a list of documents.`,
 				// 2) construct a paramterized query to get the actual records in each segment
 				// 3) query the database with the query constructed in 1) to get segments and their counts
 				// 4) return the segments, their counts, and a query constructed to get the records
-				for i := range schemas {
-					var (
-						schema         = schemas[i]
-						segmentCounts  map[any]int64
-						segmentedQuery string
-					)
+				for i := range args {
 					h.Go(func() error {
-						segmentedQuery, err = getSegmentedQuery(segCtx, tmpl, viper.GetString("snowflakeDatabase"), schema, segmenter)
-						segmentCounts, err = getSegmentCounts(segCtx, db, tmpl, viper.GetString("snowflakeDatabase"), schema, segmenter, givenSegments)
+						var (
+							thisIndex      = args[i]
+							segmentCounts  map[any]int64
+							segmentedQuery string
+							baseQuery      string
+							tmpl           *template.Template
+						)
+						baseQuery = queries[thisIndex]
+						fmt.Printf("beginning query from %s (as per config file for %s)\n", baseQuery, thisIndex)
+						tmpl, err := template.ParseFiles(baseQuery)
+						if err != nil {
+							return err
+						}
+						segmentedQuery, err = getSegmentedQuery(segCtx, tmpl, "", "", segmenter)
+						if err != nil {
+							return err
+						}
+						segmentCounts, err = getSegmentCounts(segCtx, db, tmpl, "", "", segmenter, givenSegments)
 						if err != nil {
 							return err
 						}
@@ -206,8 +224,8 @@ from a json file containing a list of documents.`,
 								}
 							}
 						}
-						segments[schema] = segmentCounts
-						segmentedQueries[schema] = segmentedQuery
+						segments[thisIndex] = segmentCounts
+						segmentedQueries[thisIndex] = segmentedQuery
 						for _, count := range segmentCounts {
 							totalSize += count
 						}
@@ -220,33 +238,34 @@ from a json file containing a list of documents.`,
 					cancel(fmt.Errorf("error encountered during waiting for h %s: %s", indexName, err))
 				}
 
+				progress = mpb.NewWithContext(ctx)
 				go func() {
-					for i := 0; i < len(schemas); i++ {
+					for i := 0; i < len(args); i++ {
 						var (
-							schema      = schemas[i]
-							segmentKeys = SortMapKeys(segments[schema])
-							query       = segmentedQueries[schema]
+							thisIndex   = args[i]
+							segmentKeys = SortMapKeys(segments[thisIndex])
+							query       = segmentedQueries[thisIndex]
 						)
 						for j := 0; j < len(segmentKeys); j++ {
 							var (
 								segment = segmentKeys[j]
-								count   = segments[schema][segment]
+								count   = segments[thisIndex][segment]
 							)
 							g.Go(func() error {
-								var bar = _import.AddBarMomentary(progress, count, schema, segment)
+								var bar = _import.AddBarMomentary(progress, count, thisIndex, segment)
 								var rows *sql.Rows
 								var start = time.Now()
 
 								rows, err = db.QueryContext(ctx, query, segment)
 								if err != nil {
-									cancel(fmt.Errorf("error encountered getting rows of %s, %s at %s: %s", indexName, schema, segment, err))
+									cancel(fmt.Errorf("error encountered getting rows of %s at %s: %s", indexName, segment, err))
 								}
 								for rows.Next() {
 									var doc = types.NewDocument()
 									err = doc.ScanFrom(rows)
 									if err != nil {
 										log.Println(err)
-										e := fmt.Errorf("error encountered iterating rows of %s, %s at %s: %s", indexName, schema, segment, err)
+										e := fmt.Errorf("error encountered iterating rows of %s at %s: %s", indexName, segment, err)
 										cancel(e)
 										return e
 									}
@@ -336,20 +355,20 @@ func getSegmentCounts(ctx context.Context, db *sql.DB, baseQuery *template.Templ
 		// generate both the counting query for each segment
 		// and prepare a parameterized query
 		{
+			segmentationQuery.WriteString("WITH T AS (")
+			segmentationQuery.WriteString("\n")
+			err = baseQuery.Execute(&segmentationQuery, templateData)
+			if err != nil {
+				return segmentCounts, err
+			}
+			segmentationQuery.WriteString(")\n")
 			switch {
 			case segmenter == nil:
 				// all rows without segmentation (nil segmenter)
 				{
 					{
 						// segmentation query building: used to get counts
-						segmentationQuery.WriteString(`SELECT NULL AS SEG, COUNT(*) AS CNT FROM (`)
-						segmentationQuery.WriteString("\n")
-						err = baseQuery.Execute(&segmentationQuery, templateData)
-						if err != nil {
-							return segmentCounts, err
-						}
-						segmentationQuery.WriteString("\n")
-						segmentationQuery.WriteString(")")
+						segmentationQuery.WriteString(`SELECT NULL AS SEG, COUNT(*) AS CNT FROM T`)
 					}
 				}
 			default: // partitioned import by segmenter field
@@ -358,27 +377,16 @@ func getSegmentCounts(ctx context.Context, db *sql.DB, baseQuery *template.Templ
 					var quotedIdentifier = snowflake.QuoteIdentifier(*segmenter)
 					segmentationQuery.WriteString("SELECT ")
 					segmentationQuery.WriteString(quotedIdentifier)
-					segmentationQuery.WriteString(", COUNT(*) AS CNT FROM (")
-					segmentationQuery.WriteString("\n")
-					err = baseQuery.Execute(&segmentationQuery, templateData)
-					if err != nil {
-						return segmentCounts, err
-					}
+					segmentationQuery.WriteString(", COUNT(*) AS CNT FROM T")
 					segmentationQuery.WriteString("\n")
 					if givenSegments != nil {
-						segmentationQuery.WriteString("\n")
-						if hasWhere(baseQuery) {
-							segmentationQuery.WriteString("AND ")
-						} else {
-							segmentationQuery.WriteString("WHERE ")
-						}
+						segmentationQuery.WriteString("WHERE ")
 						segmentationQuery.WriteString(quotedIdentifier)
 						segmentationQuery.WriteString(" IN (")
 						segmentationQuery.WriteString(strings.Join(_segments, ","))
 						segmentationQuery.WriteString(")")
+						segmentationQuery.WriteString("\n")
 					}
-					segmentationQuery.WriteString(")")
-					segmentationQuery.WriteString("\n")
 					segmentationQuery.WriteString("GROUP BY ")
 					segmentationQuery.WriteString(quotedIdentifier)
 					segmentationQuery.WriteString("\n")
@@ -435,13 +443,14 @@ func getSegmentedQuery(ctx context.Context, baseQuery *template.Template, databa
 					// prepare the base query to accept a segment parameter
 					var quotedIdentifier = snowflake.QuoteIdentifier(*segmenter)
 
-					_segmentedQuery.WriteString("SELECT * FROM (")
+					_segmentedQuery.WriteString("WITH T AS (")
 					_segmentedQuery.WriteString("\n")
 					err = baseQuery.Execute(&_segmentedQuery, templateData)
 					if err != nil {
 						return _segmentedQuery.String(), err
 					}
-					_segmentedQuery.WriteString(")")
+					_segmentedQuery.WriteString(")\n")
+					_segmentedQuery.WriteString("SELECT * FROM T")
 					_segmentedQuery.WriteString("\n")
 					_segmentedQuery.WriteString("WHERE ")
 					_segmentedQuery.WriteString(quotedIdentifier)
@@ -469,28 +478,4 @@ func SortMapKeys(m map[any]int64) []any {
 		return false
 	})
 	return ret
-}
-
-func hasWhere(tmpl *template.Template) bool {
-	var (
-		b   strings.Builder
-		s   string
-		err error
-
-		whereIndex     int
-		hasLaterSelect int
-	)
-	err = tmpl.Execute(&b, nil)
-	if err != nil {
-		return false
-	}
-	s = strings.ToUpper(b.String())
-	whereIndex = strings.LastIndex(s, "WHERE")
-	if whereIndex != -1 {
-		hasLaterSelect = strings.LastIndex(s[whereIndex:], "SELECT")
-		if hasLaterSelect == -1 {
-			return true
-		}
-	}
-	return false
 }

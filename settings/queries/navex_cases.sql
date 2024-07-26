@@ -114,7 +114,7 @@ CASE_PARTICIPANTS AS (
         "Case ID"
 )
 SELECT
-    CD.CASE_ID                  AS case_id,
+    CD.CASE_ID                  AS id,
     CD.CASE_NUMBER              AS case_number,
     CD.ALERT_LEVEL              AS alert_level,
     CD.BRANCH_NUMBER            AS branch_number,

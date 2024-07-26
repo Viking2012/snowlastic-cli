@@ -74,7 +74,7 @@ func (d *Document) ScanFrom(rows *sql.Rows) error {
 func (d *Document) MarshalJSON() ([]byte, error) {
 	var m = make(map[string]any)
 	for k, v := range d.m {
-		if v != nil {
+		if v != nil && k != viper.GetString("identifier") {
 			m[k] = v
 		}
 	}

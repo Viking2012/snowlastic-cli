@@ -1,0 +1,56 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "transactionAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "transactionNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "record source":              {"type":"keyword","normalizer": "transactionNormalizer"},
+      "database":                   {"type":"keyword","normalizer": "transactionNormalizer"},
+      "icm id":                     {"type":"keyword","normalizer": "transactionNormalizer"},
+      "document line number":       {"type":"keyword","normalizer": "transactionNormalizer"},
+      "entity icm id":              {"type":"keyword","normalizer": "transactionNormalizer"},
+      "entity title":               {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "entity number":              {"type":"keyword","normalizer": "transactionNormalizer"},
+      "entity name":                {"type":"text"},
+      "document category code":     {"type":"keyword","normalizer": "transactionNormalizer"},
+      "document category":          {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "document type code":         {"type":"keyword","normalizer": "transactionNormalizer"},
+      "document type":              {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "creation date":              {"type":"date"},
+      "created by":                 {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "document date":              {"type":"date"},
+      "document value":             {"type":"double"},
+      "document currency":          {"type":"keyword","normalizer": "transactionNormalizer"},
+      "document quantity":          {"type":"double"},
+      "document text":              {"type":"text"},
+      "material group code":        {"type":"keyword","normalizer": "transactionNormalizer"},
+      "material group":             {"type":"text"},
+      "material code":              {"type":"keyword","normalizer": "transactionNormalizer"},
+      "material":                   {"type":"text"},
+      "company code id":            {"type":"keyword","normalizer": "transactionNormalizer"},
+      "company code":               {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "organization, level 1 code": {"type":"keyword","normalizer": "transactionNormalizer"},
+      "organization, level 1":      {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "organization, level 2 code": {"type":"keyword","normalizer": "transactionNormalizer"},
+      "organization, level 2":      {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "organization, level 3 code": {"type":"keyword","normalizer": "transactionNormalizer"},
+      "organization, level 3":      {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "transactionNormalizer"}}},
+      "deletion indicator":         {"type":"keyword","normalizer": "transactionNormalizer"}
+    }
+  }
+}

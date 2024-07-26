@@ -1,0 +1,32 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "operationalAnalyzer": {
+          "type": "custom",
+          "char_filter": ["html_strip"],
+          "tokenizer": "standard",
+          "filter": ["lowercase","stop","asciifolding","stemmer"]
+        }
+      },
+      "normalizer": {
+        "operationalNormalizer": {
+          "type": "custom",
+          "filter": ["lowercase","asciifolding","trim"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "record source":  {"type":"keyword","normalizer": "operationalNormalizer"},
+      "database":       {"type":"keyword","normalizer": "operationalNormalizer"},
+      "icm id":         {"type":"keyword","normalizer": "operationalNormalizer"},
+      "document type":  {"type":"keyword","normalizer": "operationalNormalizer"},
+      "document date":  {"type":"date"},
+      "creation date":  {"type":"date"},
+      "created by":     {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "operationalNormalizer"}}},
+      "document text":  {"type":"text"}
+    }
+  }
+}

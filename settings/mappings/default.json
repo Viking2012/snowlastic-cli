@@ -20,6 +20,8 @@
   "mappings": {
     "properties": {
       "database":                   {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "document id":                {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "document line number":       {"type": "keyword",	"normalizer": "documentNormalizer"},
       "company code id":            {"type": "keyword",	"normalizer": "documentNormalizer"},
       "company code":               {"type": "keyword",	"normalizer": "documentNormalizer"},
       "document category code":     {"type": "keyword",	"normalizer": "documentNormalizer"},
@@ -37,6 +39,7 @@
       "document text":              {"type": "text"                                       },
       "document currency":          {"type": "keyword",	"normalizer": "documentNormalizer"},
       "document value":             {"type": "double"                                     },
+      "document quantity":          {"type": "double"                                     },
       "material code":              {"type": "keyword",	"normalizer": "documentNormalizer"},
       "material":                   {"type": "keyword",	"normalizer": "documentNormalizer"},
       "material group code":        {"type": "keyword",	"normalizer": "documentNormalizer"},
@@ -46,8 +49,7 @@
       "organization, level 2 code": {"type": "keyword",	"normalizer": "documentNormalizer"},
       "organization, level 2":      {"type": "keyword",	"normalizer": "documentNormalizer"},
       "organization, level 3 code": {"type": "keyword",	"normalizer": "documentNormalizer"},
-      "organization, level 3":      {"type": "keyword",	"normalizer": "documentNormalizer"},
-      "flags":                      {"type":  "nested", "include_in_root": true}
+      "organization, level 3":      {"type": "keyword",	"normalizer": "documentNormalizer"}
     }
   }
 }
