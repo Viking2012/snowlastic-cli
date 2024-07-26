@@ -49,7 +49,7 @@
       "organization, level 2 code": {"type": "keyword",	"normalizer": "documentNormalizer"},
       "organization, level 2":      {"type": "keyword",	"normalizer": "documentNormalizer"},
       "organization, level 3 code": {"type": "keyword",	"normalizer": "documentNormalizer"},
-      "organization, level 3":      {"type": "keyword",	"normalizer": "documentNormalizer"},
+      "organization, level 3":      {"type": "keyword",	"normalizer": "documentNormalizer"}
     }
   }
 }

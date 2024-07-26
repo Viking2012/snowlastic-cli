@@ -79,7 +79,7 @@ be created without any explicit mapping (elasticsearch defaults to its own inter
 			return err
 		}
 		if len(args) == 0 {
-			for indexName, _ := range knownIndices {
+			for indexName := range knownIndices {
 				args = append(args, indexName)
 			}
 		}

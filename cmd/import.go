@@ -479,27 +479,3 @@ func SortMapKeys(m map[any]int64) []any {
 	})
 	return ret
 }
-
-func hasWhere(tmpl *template.Template) bool {
-	var (
-		b   strings.Builder
-		s   string
-		err error
-
-		whereIndex     int
-		hasLaterSelect int
-	)
-	err = tmpl.Execute(&b, nil)
-	if err != nil {
-		return false
-	}
-	s = strings.ToUpper(b.String())
-	whereIndex = strings.LastIndex(s, "WHERE")
-	if whereIndex != -1 {
-		hasLaterSelect = strings.LastIndex(s[whereIndex:], "SELECT")
-		if hasLaterSelect == -1 {
-			return true
-		}
-	}
-	return false
-}

@@ -24,7 +24,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"github.com/elastic/go-elasticsearch/v8"
 	"log"
@@ -260,32 +259,4 @@ func getProxy() string {
 		proxy = fmt.Sprintf(`http://%v`, proxy)
 	}
 	return proxy
-}
-
-func convertIndices(a any) (map[string]map[string]string, error) {
-	var (
-		tmpMap   = make(map[string]any)
-		indexMap = make(map[string]map[string]string)
-		ok       bool
-	)
-	if tmpMap, ok = a.(map[string]any); !ok {
-		return nil, errors.New("could not load elasticIndices into tmpMap")
-		//panic("could not load elasticIndices into tmpMap")
-	}
-	for k, v := range tmpMap {
-		var tmp = make(map[string]any)
-		var tmp2 = make(map[string]string)
-		if tmp, ok = v.(map[string]any); !ok {
-			return nil, errors.New(fmt.Sprintf("could not load elasticIndices into tmp '%s' (type %T)", k, v))
-			//panic(fmt.Sprintf("could not load elasticIndices into tmp '%s' (type %T)", k, v))
-		}
-		for k2, v2 := range tmp {
-			if tmp2[k2], ok = v2.(string); !ok {
-				return nil, errors.New(fmt.Sprintf("could not load elasticIndices into tmp['%s']['%s']%v (type %T)", k, k2, v, v))
-				//panic(fmt.Sprintf("could not load elasticIndices into tmp['%s']['%s']%v (type %T)", k, k2, v, v))
-			}
-		}
-		indexMap[k] = tmp2
-	}
-	return indexMap, nil
 }
