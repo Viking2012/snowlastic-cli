@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'CENTRAL_CUSTOMER_MASTER' AS "record source"
      , DB                                    AS "database"
      , ICM_ID                                AS "id"
      , ICM_ID                                AS "icm id"
@@ -33,5 +35,5 @@ SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
      , KNA1_ERDAT                            AS "creation date"
      , KNA1_ERNAM                            AS "created by"
      , CURRENT_DATE()                        AS "document date"
-  FROM COMMON_DATA.CENTRAL_CUSTOMER_MASTER
+  FROM PROD_LI.COMMON_DATA.CENTRAL_CUSTOMER_MASTER
 

@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.PAYMENT_RUNS'    AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'PAYMENT_RUNS'    AS "record source"
      , DB                            AS "database"
      , ICM_ID                        AS "id"
      , ICM_ID                        AS "icm id"
@@ -35,7 +37,7 @@ SELECT 'COMMON_DATA.PAYMENT_RUNS'    AS "record source"
      , PCM.ORG3                      AS "organization, level 3 code"
      , PCM.ORG3_CONCAT               AS "organization, level 3"
      , REGUH_XVORL                   AS "deletion indicator"
-  FROM COMMON_DATA.PAYMENT_RUNS
+  FROM PROD_LI.COMMON_DATA.PAYMENT_RUNS
            INNER JOIN PROD_UDM.CONFIGURATION.SOURCE_SYSTEM SS
                       ON PAYMENT_RUNS.DB = RTRIM(SS.SYSTEM_NAME)
            LEFT JOIN COMMON_DATA_STAGING.T001
@@ -82,7 +84,7 @@ SELECT 'COMMON_DATA.PAYMENT_RUNS'    AS "record source"
      , PCM.ORG3                      AS "organization, level 3 code"
      , PCM.ORG3_CONCAT               AS "organization, level 3"
      , REGUH_XVORL                   AS "deletion indicator"
-  FROM COMMON_DATA.PAYMENT_RUNS
+  FROM PROD_LI.COMMON_DATA.PAYMENT_RUNS
            INNER JOIN PROD_UDM.CONFIGURATION.SOURCE_SYSTEM SS
                       ON PAYMENT_RUNS.DB = RTRIM(SS.SYSTEM_NAME)
            LEFT JOIN COMMON_DATA_STAGING.T001

@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.MM_INVOICES'       AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'MM_INVOICES'       AS "record source"
      , MM_INVOICES.DB                  AS "database"
      , ICM_ID || '|' || RSEG_BUZEI     AS "id"
      , ICM_ID                          AS "icm id"
@@ -46,7 +48,7 @@ SELECT 'COMMON_DATA.MM_INVOICES'       AS "record source"
      , "ProfitCenter_ORG3"             AS "organization, level 3 code"
      , "ProfitCenter_ORG3_Concat"      AS "organization, level 3"
      , NULL                            AS "deletion indicator"
-  FROM COMMON_DATA.MM_INVOICES
+  FROM PROD_LI.COMMON_DATA.MM_INVOICES
            LEFT JOIN PROD_UDM_PERSISTENT.PERSISTENT_SAP.T003T
                      ON MM_INVOICES.SOURCESYSTEMID = T003T.SOURCESYSTEMID
                          AND MM_INVOICES.RBKP_BLART = T003T.BLART

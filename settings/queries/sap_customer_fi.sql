@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.CUSTOMER_FI'     AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'CUSTOMER_FI'     AS "record source"
      , DB                            AS "database"
      , ICM_ID || '|' || BSAD_BUZEI   AS "id"
      , ICM_ID                        AS "icm id"
@@ -36,4 +38,4 @@ SELECT 'COMMON_DATA.CUSTOMER_FI'     AS "record source"
      , FAGLFLEXA_PRCTR_ORG3          AS "organization, level 3 code"
      , "FAGLFLEXA_PRCTR_ORG3_Concat" AS "organization, level 3"
      , NULL                          AS "deletion indicator"
-  FROM COMMON_DATA.CUSTOMER_FI
+  FROM PROD_LI.COMMON_DATA.CUSTOMER_FI

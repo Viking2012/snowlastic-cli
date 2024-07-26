@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.CENTRAL_CUSTOMER_MASTER' AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'CENTRAL_VENDOR_MASTER' AS "record source"
      , DB                                    AS "database"
      , ICM_VENDOR_ID                         AS "id"
      , ICM_VENDOR_ID                         AS "icm id"

@@ -1,4 +1,6 @@
-SELECT 'COMMON_DATA.CHECKS'  AS "record source"
+SELECT 'PROD_LI.' ||
+       'COMMON_DATA.' ||
+       'CHECKS'  AS "record source"
      , DB                    AS "database"
      , CONCAT_WS('|',
                  DB,
@@ -101,5 +103,5 @@ SELECT 'COMMON_DATA.CHECKS'  AS "record source"
      , NULL                  AS "organization, level 3 code"
      , NULL                  AS "organization, level 3"
      , NULL                  AS "deletion indicator"
-  FROM COMMON_DATA.CHECKS
+  FROM PROD_LI.COMMON_DATA.CHECKS
  WHERE PAYR_LIFNR = ''
