@@ -18,27 +18,30 @@ func QuoteValue(i any) string {
 	return ""
 }
 func QuoteIdentifier(identifier string) string {
-	var needsQuotes bool
-	var ret string
-	re := regexp.MustCompile(`^(.+\()(.+)(\))`)
-	match := re.FindStringSubmatch(identifier)
-	if len(match) != 0 {
-		needsQuotes, _ = needsQuoting(match[2])
-		if needsQuotes {
-			ret = fmt.Sprintf(`%s"%s"%s`, match[1], match[2], match[3])
-		} else {
-			ret = fmt.Sprintf(`%s%s%s`, match[1], match[2], match[3])
-		}
+	var (
+		needsQuotes                 bool
+		prefix, _identifier, suffix string
+		ret                         string
+	)
+	prefix, _identifier, suffix = extractIdentifier("", identifier, "")
+	needsQuotes, _ = needsQuoting(_identifier)
+	if needsQuotes {
+		ret = fmt.Sprintf(`%s"%s"%s`, prefix, _identifier, suffix)
 	} else {
-		needsQuotes, _ = needsQuoting(identifier)
-		if needsQuotes {
-			ret = fmt.Sprintf(`"%s"`, identifier)
-		} else {
-			ret = fmt.Sprintf("%s", identifier)
-		}
+		ret = fmt.Sprintf("%s%s%s", prefix, _identifier, suffix)
 	}
 	return ret
 }
+func extractIdentifier(prefix, identifier, suffix string) (string, string, string) {
+	var ()
+	re := regexp.MustCompile(`^(.+?\()(.+)(\)$)`)
+	match := re.FindStringSubmatch(identifier)
+	if len(match) > 0 {
+		prefix, identifier, suffix = extractIdentifier(prefix+match[1], match[2], suffix+match[3])
+	}
+	return prefix, identifier, suffix
+}
+
 func needsQuoting(field string) (bool, error) {
 	var (
 		matched bool

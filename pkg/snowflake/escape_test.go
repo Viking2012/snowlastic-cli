@@ -246,6 +246,11 @@ func TestQuoteIdentifier(t *testing.T) {
 			args: args{`YEAR("test field")`},
 			want: `YEAR("test field")`,
 		},
+		{
+			name: "multiple",
+			args: args{`TO_CHAR(YEAR("document date"))`},
+			want: `TO_CHAR(YEAR("document date"))`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
