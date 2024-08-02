@@ -86,6 +86,9 @@ elasticIndices:
   sfdc_account:
     path_to_query: "settings/queries/sfdc_account.sql"
     path_to_index_settings: "settings/mappings/master_data_default.json"
+  sfdc_case:
+    path_to_query: "settings/queries/sfdc_case.sql"
+    path_to_index_settings: "settings/mappings/operational_default.json"
   sfdc_email_message:
     path_to_query: "path/to/settings/queries/sfdc_email_message.sql"
     path_to_index_settings: "settings/mappings/operational_default.json"
