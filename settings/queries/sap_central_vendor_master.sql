@@ -4,7 +4,7 @@ SELECT 'PROD_LI.' ||
      , DB                                    AS "database"
      , ICM_VENDOR_ID                         AS "id"
      , ICM_VENDOR_ID                         AS "icm id"
-     , 'Customer'                            AS "entity title"
+     , 'Vendor'                            AS "entity title"
      , LFA1_LIFNR                            AS "entity number"
      , RTRIM(CONCAT_WS(' ',
                        LFA1_NAME1,
