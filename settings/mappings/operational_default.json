@@ -25,8 +25,12 @@
       "document type":  {"type":"keyword","normalizer": "operationalNormalizer"},
       "document date":  {"type":"date"},
       "creation date":  {"type":"date"},
-      "created by":     {"type":"text","fields": {"keyword": {"type": "keyword","ignore_above": 256,"normalizer": "operationalNormalizer"}}},
-      "document text":  {"type":"text"}
+      "created by":     {"type":"text",    "analyzer":   "operationalAnalyzer",
+                         "fields": {"keyword": {
+                           "type": "keyword",
+                           "ignore_above": 256,
+                           "normalizer": "operationalNormalizer"}}},
+      "document text":  {"type":"text",    "analyzer":   "operationalAnalyzer"}
     }
   }
 }
