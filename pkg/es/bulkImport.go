@@ -66,9 +66,9 @@ func BulkImport(es *elasticsearch.Client, batches <-chan []orm.SnowlasticDocumen
 			buf.Grow(len(meta) + len(data))
 			buf.Write(meta)
 			buf.Write(data)
-			bar.EwmaIncrement(time.Since(start))
 		}
 		indexCount, errorCount, err := bulkIndex(es, buf, indexName, BulkInsertSize)
+		bar.EwmaIncrInt64(int64(len(batch)), time.Since(start))
 		if err != nil {
 			return numIndexed, numErrors, err
 		}
