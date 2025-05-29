@@ -30,7 +30,7 @@ func Test_isUpper(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := isUpper(tt.args.s); got != tt.want {
-				t.Errorf("isUpper() = %v, want %v", got, tt.want)
+				t.Errorf("isUpper() = %v, want %v\n", got, tt.want)
 			}
 		})
 	}
@@ -87,11 +87,11 @@ func Test_needsQuoting(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := needsQuoting(tt.args.field)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("needsQuoting() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("needsQuoting() error = %v, wantErr %v\n", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("needsQuoting() got = %v, want %v", got, tt.want)
+				t.Errorf("needsQuoting() got = %v, want %v\n", got, tt.want)
 			}
 		})
 	}
@@ -170,7 +170,7 @@ func TestQuoteValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := QuoteValue(tt.args.i); got != tt.want {
-				t.Errorf("QuoteValue() = %v, want %v", got, tt.want)
+				t.Errorf("QuoteValue() = %v, want %v\n", got, tt.want)
 			}
 		})
 	}
@@ -251,11 +251,16 @@ func TestQuoteIdentifier(t *testing.T) {
 			args: args{`TO_CHAR(YEAR("document date"))`},
 			want: `TO_CHAR(YEAR("document date"))`,
 		},
+		{
+			name: "multiple",
+			args: args{`TO_CHAR(YEAR("document date"),'YYYY-MM')`},
+			want: `TO_CHAR(YEAR("document date"),'YYYY-MM'))`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := QuoteIdentifier(tt.args.identifier); got != tt.want {
-				t.Errorf("QuoteIdentifier() = %v, want %v", got, tt.want)
+				t.Errorf("QuoteIdentifier() = %v, want %v\n", got, tt.want)
 			}
 		})
 	}
